@@ -12,6 +12,8 @@ import json
 import os
 from typing import Any
 
+import httpx
+
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
@@ -22,10 +24,24 @@ def _server_url() -> str:
 
 async def call_tool(name: str, arguments: dict[str, Any] | None = None) -> Any:
     """Call an MCP tool and return its result parsed as JSON when possible."""
-    async with sse_client(_server_url()) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            result = await session.call_tool(name, arguments or {})
+    try:
+        async with sse_client(_server_url()) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                result = await session.call_tool(name, arguments or {})
+    except ExceptionGroup as group:
+        exc = group.exceptions[0]
+        if isinstance(exc, (OSError, httpx.HTTPError)):
+            raise RuntimeError(
+                f"Could not reach MCP server at {_server_url()}. "
+                f"Is it running (python -m core.mcp_fabric.server)? ({exc})"
+            ) from group
+        raise exc from group
+    except (OSError, httpx.HTTPError) as exc:
+        raise RuntimeError(
+            f"Could not reach MCP server at {_server_url()}. "
+            f"Is it running (python -m core.mcp_fabric.server)? ({exc})"
+        ) from exc
 
     if result.isError:
         text = "; ".join(
