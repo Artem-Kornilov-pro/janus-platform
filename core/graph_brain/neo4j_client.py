@@ -137,6 +137,26 @@ class Neo4jClient:
             result = await session.run(query, document_id=document_id)
             return [record.data() async for record in result]
 
+    async def find_document_by_hash(self, content_hash: str) -> dict[str, Any] | None:
+        """Return the Document node with the given content_hash, if one exists."""
+        query = "MATCH (d:Document {content_hash: $content_hash}) RETURN d LIMIT 1"
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query, content_hash=content_hash)
+            record = await result.single()
+            return dict(record["d"]) if record else None
+
+    async def list_documents(self) -> list[dict[str, Any]]:
+        """Return summary info for all ingested Document nodes."""
+        query = (
+            "MATCH (d:Document) "
+            "RETURN d.id AS id, d.title AS title, d.document_type AS document_type, "
+            "       d.source_path AS source_path, d.ingested_at AS ingested_at "
+            "ORDER BY d.ingested_at DESC"
+        )
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query)
+            return [record.data() async for record in result]
+
     async def get_entity_by_label(self, label: str, name: str) -> list[dict[str, Any]]:
         """Find nodes of a given label whose name/title/id/code contains `name`."""
         query = (
