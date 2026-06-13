@@ -5,7 +5,6 @@ table data produced by the extractor, ask an LLM to identify the document
 type, parties, dates and break the content into typed sections.
 """
 
-import json
 
 import openai
 

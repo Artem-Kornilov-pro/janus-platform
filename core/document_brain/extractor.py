@@ -6,7 +6,6 @@ to OCR (pytesseract) for scanned pages with no extractable text layer.
 
 import pdfplumber
 import pytesseract
-from PIL import Image
 
 from core.document_brain.models import DocumentExtraction, PageExtraction, TextBlock
 
@@ -52,7 +51,10 @@ def extract_document(file_path: str) -> DocumentExtraction:
             else:
                 blocks = _extract_ocr_blocks(page, i)
 
-            tables = [table.extract() for table in page.find_tables()]
+            tables = [
+                [["" if cell is None else cell for cell in row] for row in table.extract()]
+                for table in page.find_tables()
+            ]
 
             pages.append(PageExtraction(page=i, blocks=blocks, tables=tables))
 
