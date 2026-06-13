@@ -79,4 +79,6 @@ INDEX_STATEMENTS = (
 
 def all_setup_statements() -> tuple[str, ...]:
     """Return all Cypher statements needed to initialize the schema."""
-    return CONSTRAINT_STATEMENTS + INDEX_STATEMENTS
+    from core.learning_brain.feedback_model import FEEDBACK_CONSTRAINT
+
+    return CONSTRAINT_STATEMENTS + INDEX_STATEMENTS + (FEEDBACK_CONSTRAINT,)
