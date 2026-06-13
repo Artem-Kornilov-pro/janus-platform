@@ -50,11 +50,19 @@ async def call_tool(name: str, arguments: dict[str, Any] | None = None) -> Any:
         raise RuntimeError(text or f"MCP tool '{name}' returned an error")
 
     texts = [block.text for block in result.content if hasattr(block, "text")]
-    combined = "\n".join(texts)
-    try:
-        return json.loads(combined)
-    except (json.JSONDecodeError, ValueError):
-        return combined
+    if len(texts) == 1:
+        try:
+            return json.loads(texts[0])
+        except (json.JSONDecodeError, ValueError):
+            return texts[0]
+
+    parsed = []
+    for text in texts:
+        try:
+            parsed.append(json.loads(text))
+        except (json.JSONDecodeError, ValueError):
+            parsed.append(text)
+    return parsed
 
 
 async def ask_graph(question: str) -> Any:

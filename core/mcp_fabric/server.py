@@ -39,7 +39,11 @@ from core.learning_brain.prompt_optimizer import retrain_prompts
 from core.learning_brain.reward_model import compute_stats
 from core.mcp_fabric.nl2cypher import question_to_cypher
 
-mcp = FastMCP("janus-lex-graph")
+mcp = FastMCP(
+    "janus-lex-graph",
+    host=os.environ.get("MCP_HOST", "127.0.0.1"),
+    port=int(os.environ.get("MCP_PORT", "8000")),
+)
 
 
 def _get_client() -> Neo4jClient:

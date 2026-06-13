@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from PyQt6.QtWidgets import QMainWindow, QTabWidget
 
-from frontend.async_runner import AsyncRunner
-from frontend.pages.chat_tab import ChatTab
-from frontend.pages.documents_tab import DocumentsTab
-from frontend.pages.entities_tab import EntitiesTab
-from frontend.pages.learning_tab import LearningTab
+from async_runner import AsyncRunner
+from pages.chat_tab import ChatTab
+from pages.documents_tab import DocumentsTab
+from pages.entities_tab import EntitiesTab
+from pages.learning_tab import LearningTab
 
 
 class MainWindow(QMainWindow):

@@ -12,8 +12,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from frontend import mcp_client
-from frontend.async_runner import AsyncRunner
+import mcp_client
+from async_runner import AsyncRunner
 
 
 class ChatTab(QWidget):

@@ -13,8 +13,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from frontend import mcp_client
-from frontend.async_runner import AsyncRunner
+import mcp_client
+from async_runner import AsyncRunner
 
 
 class DocumentsTab(QWidget):
@@ -77,6 +77,9 @@ class DocumentsTab(QWidget):
                 return
             self.document_list.clear()
             for doc in result or []:
+                if not isinstance(doc, dict):
+                    self.document_list.addItem(str(doc))
+                    continue
                 title = doc.get("title") or doc.get("id") or "?"
                 doc_type = doc.get("document_type", "")
                 self.document_list.addItem(f"{title}  [{doc_type}]  ({doc.get('id', '')})")
