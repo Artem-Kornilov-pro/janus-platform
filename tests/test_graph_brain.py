@@ -7,11 +7,9 @@ from core.graph_brain.graph_rag import ClauseAnalysis, analyze_clause, build_gra
 
 def _mock_client(response_payload: dict) -> MagicMock:
     client = MagicMock()
-    content_block = MagicMock()
-    content_block.text = json.dumps(response_payload)
     response = MagicMock()
-    response.content = [content_block]
-    client.messages.create.return_value = response
+    response.output_text = json.dumps(response_payload)
+    client.responses.create.return_value = response
     return client
 
 

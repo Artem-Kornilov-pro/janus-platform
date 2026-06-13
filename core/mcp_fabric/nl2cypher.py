@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
-
-import anthropic
+import openai
 
 from core.graph_brain.schema import NODE_LABELS, RELATIONSHIP_TYPES
+from core.llm.client import complete
+from core.llm.json_utils import parse_json_response
 
 MODEL = "claude-sonnet-4-6"
 
@@ -50,18 +50,10 @@ Rules:
 """
 
 
-def question_to_cypher(question: str, client: anthropic.Anthropic | None = None) -> tuple[str, dict]:
+def question_to_cypher(question: str, client: openai.OpenAI | None = None) -> tuple[str, dict]:
     """Translate a natural-language question into a (cypher, parameters) pair."""
-    client = client or anthropic.Anthropic()
-
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": question}],
-    )
-
-    data = json.loads(response.content[0].text)
+    raw = complete(SYSTEM_PROMPT, question, max_output_tokens=1024, client=client)
+    data = parse_json_response(raw)
     cypher = data["cypher"]
 
     forbidden = ("CREATE", "MERGE", "DELETE", "SET", "REMOVE", "DROP", "CALL")
