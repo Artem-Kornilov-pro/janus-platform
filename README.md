@@ -21,6 +21,7 @@ Early development. Core + Lex domain in progress.
 
 Detailed docs (English / Русский) for each component:
 
+- [Setup & Installation](docs/en/setup.md) / [Установка и запуск](docs/ru/setup.md)
 - [Architecture overview](docs/en/architecture.md) / [Обзор архитектуры](docs/ru/architecture.md)
 - [Document Brain](docs/en/document_brain.md) / [Document Brain (рус.)](docs/ru/document_brain.md)
 - [Graph Brain](docs/en/graph_brain.md) / [Graph Brain (рус.)](docs/ru/graph_brain.md)
