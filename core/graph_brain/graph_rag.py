@@ -60,9 +60,19 @@ class ClauseAnalysis(BaseModel):
     violated_norms: list[ViolatedNorm] = []
 
 
-def analyze_clause(section: DocumentSection, client: openai.OpenAI | None = None) -> ClauseAnalysis:
-    """Use an LLM to extract obligations, risks and legal norm references from a clause."""
-    raw = complete(SYSTEM_PROMPT, f"{section.title}\n\n{section.content}", max_output_tokens=2048, client=client)
+def analyze_clause(
+    section: DocumentSection,
+    client: openai.OpenAI | None = None,
+    extra_instructions: str = "",
+) -> ClauseAnalysis:
+    """Use an LLM to extract obligations, risks and legal norm references from a clause.
+
+    `extra_instructions`, if provided, is appended to the system prompt -
+    typically a "lessons learned" section produced by the Learning Brain's
+    prompt optimizer from past human feedback.
+    """
+    system_prompt = SYSTEM_PROMPT + extra_instructions
+    raw = complete(system_prompt, f"{section.title}\n\n{section.content}", max_output_tokens=2048, client=client)
     data = parse_json_response(raw)
     return ClauseAnalysis(**data)
 
@@ -83,6 +93,7 @@ def build_graph(
     document_id: str,
     document: StructuredDocument,
     client: openai.OpenAI | None = None,
+    extra_instructions: str = "",
 ) -> tuple[list[dict], list[dict]]:
     """Build the node/relationship batch for a structured document.
 
@@ -135,7 +146,7 @@ def build_graph(
             "rel_type": "CONTAINS",
         })
 
-        analysis = analyze_clause(section, client=client)
+        analysis = analyze_clause(section, client=client, extra_instructions=extra_instructions)
 
         for j, obligation in enumerate(analysis.obligations):
             obligation_id = _obligation_id(clause_id, j)
