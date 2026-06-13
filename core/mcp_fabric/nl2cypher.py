@@ -52,7 +52,7 @@ Rules:
 
 def question_to_cypher(question: str, client: openai.OpenAI | None = None) -> tuple[str, dict]:
     """Translate a natural-language question into a (cypher, parameters) pair."""
-    raw = complete(SYSTEM_PROMPT, question, max_output_tokens=1024, client=client)
+    raw = complete(SYSTEM_PROMPT, question, max_output_tokens=4096, client=client)
     data = parse_json_response(raw)
     cypher = data["cypher"]
 
