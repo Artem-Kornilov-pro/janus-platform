@@ -220,4 +220,6 @@ async def list_documents() -> list[dict]:
 
 if __name__ == "__main__":
     transport = os.environ.get("MCP_TRANSPORT", "sse")
-    mcp.run(transport=transport)
+    if transport not in ("stdio", "sse", "streamable-http"):
+        raise ValueError(f"Invalid MCP_TRANSPORT: {transport!r}")
+    mcp.run(transport=transport)  # type: ignore[arg-type]

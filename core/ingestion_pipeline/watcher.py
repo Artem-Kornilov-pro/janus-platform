@@ -13,7 +13,6 @@ from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from core.graph_brain.neo4j_client import Neo4jClient
 from core.ingestion_pipeline.batch_ingester import ingest_paths
 from core.ingestion_pipeline.extractors import SUPPORTED_EXTENSIONS
 
@@ -46,7 +45,7 @@ class _NewFileHandler(FileSystemEventHandler):
             await client.close()
 
 
-def watch_folder(folder: str, client_factory) -> Observer:
+def watch_folder(folder: str, client_factory):  # noqa: ANN201
     """Start watching `folder` for new documents. Returns the Observer (call .stop() to end)."""
     loop = asyncio.get_event_loop()
     handler = _NewFileHandler(loop, client_factory, folder)
