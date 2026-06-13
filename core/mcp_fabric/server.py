@@ -10,6 +10,9 @@ Tools:
     ask_graph(question)                - natural language -> Cypher -> results
     submit_feedback(...)               - record human feedback on an extracted entity
     get_learning_stats()               - precision/reward per entity type from feedback
+    ingest_folder(path)                 - extract, chunk and graph all documents in a folder
+    get_ingestion_status(job_id)        - status of an ingestion job
+    list_documents()                    - all ingested documents
 
 Environment variables:
     NEO4J_URI       (default: bolt://localhost:7687)
@@ -29,6 +32,8 @@ from mcp.server.fastmcp import FastMCP
 from core.document_brain.structurer import structure_text
 from core.graph_brain.graph_rag import build_graph
 from core.graph_brain.neo4j_client import Neo4jClient
+from core.ingestion_pipeline.batch_ingester import ingest_folder as run_ingest_folder
+from core.ingestion_pipeline.tracker import get_job
 from core.learning_brain.feedback_model import Feedback, list_feedback, store_feedback
 from core.learning_brain.prompt_optimizer import retrain_prompts
 from core.learning_brain.reward_model import compute_stats
@@ -171,6 +176,42 @@ async def get_learning_stats() -> dict:
             for entity_type, s in stats.items()
         },
     }
+
+
+@mcp.tool()
+async def ingest_folder(path: str, recursive: bool = True) -> dict:
+    """Extract, chunk and graph every supported document (PDF/DOCX/TXT/MD/RTF) in a folder.
+
+    Runs synchronously and returns the completed IngestionJob summary,
+    including counts of processed/skipped files and any errors.
+    """
+    client = _get_client()
+    try:
+        job = await run_ingest_folder(client, path, recursive=recursive)
+    finally:
+        await client.close()
+
+    return job.model_dump()
+
+
+@mcp.tool()
+async def get_ingestion_status(job_id: str) -> dict | None:
+    """Return the status of a previously run ingestion job by its id."""
+    client = _get_client()
+    try:
+        return await get_job(client, job_id)
+    finally:
+        await client.close()
+
+
+@mcp.tool()
+async def list_documents() -> list[dict]:
+    """List all documents currently in the knowledge graph."""
+    client = _get_client()
+    try:
+        return await client.list_documents()
+    finally:
+        await client.close()
 
 
 if __name__ == "__main__":
