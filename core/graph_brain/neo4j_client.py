@@ -137,6 +137,45 @@ class Neo4jClient:
             result = await session.run(query, document_id=document_id)
             return [record.data() async for record in result]
 
+    async def get_entity_by_label(self, label: str, name: str) -> list[dict[str, Any]]:
+        """Find nodes of a given label whose name/title/id/code contains `name`."""
+        query = (
+            f"MATCH (n:{label}) "
+            "WHERE toLower(coalesce(n.name, '')) CONTAINS toLower($name) "
+            "   OR toLower(coalesce(n.title, '')) CONTAINS toLower($name) "
+            "   OR toLower(coalesce(n.id, '')) CONTAINS toLower($name) "
+            "   OR toLower(coalesce(n.code, '')) CONTAINS toLower($name) "
+            "RETURN n"
+        )
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query, name=name)
+            return [dict(record["n"]) async for record in result]
+
+    async def find_relationships(self, source: str, target: str) -> list[dict[str, Any]]:
+        """Find relationships between any nodes matching `source` and `target` by name/title/id/code."""
+        query = (
+            "MATCH (a)-[r]->(b) "
+            "WHERE (toLower(coalesce(a.name, '')) CONTAINS toLower($source) "
+            "       OR toLower(coalesce(a.title, '')) CONTAINS toLower($source) "
+            "       OR toLower(coalesce(a.id, '')) CONTAINS toLower($source) "
+            "       OR toLower(coalesce(a.code, '')) CONTAINS toLower($source)) "
+            "  AND (toLower(coalesce(b.name, '')) CONTAINS toLower($target) "
+            "       OR toLower(coalesce(b.title, '')) CONTAINS toLower($target) "
+            "       OR toLower(coalesce(b.id, '')) CONTAINS toLower($target) "
+            "       OR toLower(coalesce(b.code, '')) CONTAINS toLower($target)) "
+            "RETURN labels(a) AS source_labels, a AS source, type(r) AS relationship, "
+            "       labels(b) AS target_labels, b AS target"
+        )
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query, source=source, target=target)
+            return [record.data() async for record in result]
+
+    async def run_read_query(self, cypher: str, parameters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        """Run an arbitrary read-only Cypher query and return the records as dicts."""
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(cypher, parameters or {})
+            return [record.data() async for record in result]
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------

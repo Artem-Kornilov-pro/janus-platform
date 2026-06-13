@@ -31,16 +31,20 @@ this schema exactly (no extra commentary, no markdown fences):
 """
 
 
-def structure_document(extraction: DocumentExtraction, client: anthropic.Anthropic | None = None) -> StructuredDocument:
+def structure_text(text: str, client: anthropic.Anthropic | None = None) -> StructuredDocument:
+    """Structure a raw text blob into a StructuredDocument via an LLM."""
     client = client or anthropic.Anthropic()
 
     response = client.messages.create(
         model=MODEL,
         max_tokens=4096,
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": extraction.full_text()}],
+        messages=[{"role": "user", "content": text}],
     )
 
-    raw = response.content[0].text
-    data = json.loads(raw)
+    data = json.loads(response.content[0].text)
     return StructuredDocument(**data)
+
+
+def structure_document(extraction: DocumentExtraction, client: anthropic.Anthropic | None = None) -> StructuredDocument:
+    return structure_text(extraction.full_text(), client=client)
