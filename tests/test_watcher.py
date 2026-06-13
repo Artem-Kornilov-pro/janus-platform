@@ -75,11 +75,17 @@ async def test_ingest_closes_client_even_on_error():
 
 
 def test_watch_folder_starts_observer():
-    with patch("core.ingestion_pipeline.watcher.Observer") as mock_observer_cls:
-        observer = MagicMock()
-        mock_observer_cls.return_value = observer
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        with patch("core.ingestion_pipeline.watcher.Observer") as mock_observer_cls:
+            observer = MagicMock()
+            mock_observer_cls.return_value = observer
 
-        result = watch_folder("/tmp", client_factory=MagicMock())
+            result = watch_folder("/tmp", client_factory=MagicMock())
+    finally:
+        loop.close()
+        asyncio.set_event_loop(None)
 
     observer.schedule.assert_called_once()
     observer.start.assert_called_once()
