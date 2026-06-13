@@ -15,7 +15,13 @@ services:
       timeout: 5s
       retries: 10
 
+  # Optional: containerized MCP Fabric server, mainly for production/cloud
+  # deployment. For local development, run `python -m core.mcp_fabric.server`
+  # on the host instead - the "Documents > Ingest folder" feature in the
+  # frontend passes host filesystem paths, which a containerized server
+  # cannot read. Enable with `docker compose --profile docker up -d`.
   mcp-fabric:
+    profiles: ["docker"]
     build: .
     container_name: janus-mcp-fabric
     depends_on:
