@@ -43,6 +43,7 @@ async def _with_retry(func, *args, **kwargs):
             logger.warning("Attempt %d/%d failed: %s. Retrying in %.1fs", attempt + 1, MAX_RETRIES, exc, delay)
             await asyncio.sleep(delay)
 
+    assert last_error is not None
     raise last_error
 
 
