@@ -26,7 +26,7 @@ jobs:
         run: ruff check .
 
       - name: Mypy type check
-        run: mypy core domains
+        run: mypy --check-untyped-defs core domains
 
   test:
     runs-on: ubuntu-latest
