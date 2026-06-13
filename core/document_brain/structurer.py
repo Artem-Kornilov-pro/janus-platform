@@ -7,11 +7,11 @@ type, parties, dates and break the content into typed sections.
 
 import json
 
-import anthropic
+import openai
 
 from core.document_brain.models import DocumentExtraction, StructuredDocument
-
-MODEL = "claude-sonnet-4-6"
+from core.llm.client import complete
+from core.llm.json_utils import parse_json_response
 
 SYSTEM_PROMPT = """\
 You are a document analysis engine for a legal-domain assistant.
@@ -31,20 +31,12 @@ this schema exactly (no extra commentary, no markdown fences):
 """
 
 
-def structure_text(text: str, client: anthropic.Anthropic | None = None) -> StructuredDocument:
+def structure_text(text: str, client: openai.OpenAI | None = None) -> StructuredDocument:
     """Structure a raw text blob into a StructuredDocument via an LLM."""
-    client = client or anthropic.Anthropic()
-
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4096,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": text}],
-    )
-
-    data = json.loads(response.content[0].text)
+    raw = complete(SYSTEM_PROMPT, text, client=client)
+    data = parse_json_response(raw)
     return StructuredDocument(**data)
 
 
-def structure_document(extraction: DocumentExtraction, client: anthropic.Anthropic | None = None) -> StructuredDocument:
+def structure_document(extraction: DocumentExtraction, client: openai.OpenAI | None = None) -> StructuredDocument:
     return structure_text(extraction.full_text(), client=client)

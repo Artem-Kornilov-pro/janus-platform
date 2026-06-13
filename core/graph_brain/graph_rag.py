@@ -11,14 +11,12 @@ StructuredDocument produced by the basic Document Brain pipeline.
 
 from __future__ import annotations
 
-import json
-
-import anthropic
+import openai
 from pydantic import BaseModel
 
 from core.document_brain.models import DocumentSection, StructuredDocument
-
-MODEL = "claude-sonnet-4-6"
+from core.llm.client import complete
+from core.llm.json_utils import parse_json_response
 
 SYSTEM_PROMPT = """\
 You are a legal analysis engine. Given a clause from a contract, extract:
@@ -62,18 +60,10 @@ class ClauseAnalysis(BaseModel):
     violated_norms: list[ViolatedNorm] = []
 
 
-def analyze_clause(section: DocumentSection, client: anthropic.Anthropic | None = None) -> ClauseAnalysis:
+def analyze_clause(section: DocumentSection, client: openai.OpenAI | None = None) -> ClauseAnalysis:
     """Use an LLM to extract obligations, risks and legal norm references from a clause."""
-    client = client or anthropic.Anthropic()
-
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=2048,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": f"{section.title}\n\n{section.content}"}],
-    )
-
-    data = json.loads(response.content[0].text)
+    raw = complete(SYSTEM_PROMPT, f"{section.title}\n\n{section.content}", max_output_tokens=2048, client=client)
+    data = parse_json_response(raw)
     return ClauseAnalysis(**data)
 
 
@@ -92,13 +82,12 @@ def _risk_id(clause_id: str, index: int) -> str:
 def build_graph(
     document_id: str,
     document: StructuredDocument,
-    client: anthropic.Anthropic | None = None,
+    client: openai.OpenAI | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Build the node/relationship batch for a structured document.
 
     Returns a (nodes, relationships) tuple suitable for Neo4jClient.write_graph.
     """
-    client = client or anthropic.Anthropic()
 
     nodes: list[dict] = [
         {
