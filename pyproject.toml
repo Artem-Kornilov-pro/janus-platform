@@ -1,0 +1,38 @@
+[project]
+name = "janus-platform"
+version = "0.1.0"
+description = "Janus Platform - Core (Document/Graph/Learning Brains, MCP Fabric, Ingestion Pipeline) + Lex domain"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pdfplumber==0.11.4",
+    "pytesseract==0.3.13",
+    "pillow==10.4.0",
+    "pydantic==2.13.4",
+    "openai==1.99.9",
+    "neo4j==5.26.0",
+    "mcp==1.27.2",
+    "python-docx==1.1.2",
+    "striprtf==0.0.26",
+    "watchdog==5.0.3",
+]
+
+[project.optional-dependencies]
+frontend = [
+    "PyQt6==6.7.1",
+]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["core*", "domains*"]

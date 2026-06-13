@@ -16,3 +16,16 @@ domains/
 ## Status
 
 Early development. Core + Lex domain in progress.
+
+## Documentation
+
+Detailed docs (English / Русский) for each component:
+
+- [Setup & Installation](docs/en/setup.md) / [Установка и запуск](docs/ru/setup.md)
+- [Architecture overview](docs/en/architecture.md) / [Обзор архитектуры](docs/ru/architecture.md)
+- [Document Brain](docs/en/document_brain.md) / [Document Brain (рус.)](docs/ru/document_brain.md)
+- [Graph Brain](docs/en/graph_brain.md) / [Graph Brain (рус.)](docs/ru/graph_brain.md)
+- [MCP Fabric](docs/en/mcp_fabric.md) / [MCP Fabric (рус.)](docs/ru/mcp_fabric.md)
+- [Learning Brain](docs/en/learning_brain.md) / [Learning Brain (рус.)](docs/ru/learning_brain.md)
+- [Ingestion Pipeline](docs/en/ingestion_pipeline.md) / [Конвейер загрузки](docs/ru/ingestion_pipeline.md)
+- [Frontend (PyQt6)](docs/en/frontend.md) / [Фронтенд (PyQt6)](docs/ru/frontend.md)
