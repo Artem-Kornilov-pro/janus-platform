@@ -27,6 +27,7 @@ from __future__ import annotations
 import os
 import uuid
 
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 from core.document_brain.structurer import structure_text
@@ -38,6 +39,8 @@ from core.learning_brain.feedback_model import Feedback, list_feedback, store_fe
 from core.learning_brain.prompt_optimizer import retrain_prompts
 from core.learning_brain.reward_model import compute_stats
 from core.mcp_fabric.nl2cypher import question_to_cypher
+
+load_dotenv()
 
 mcp = FastMCP(
     "janus-lex-graph",
