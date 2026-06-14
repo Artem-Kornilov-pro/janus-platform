@@ -43,8 +43,15 @@ read-only Cypher query that answers it:
 {{"cypher": string, "parameters": object}}
 
 Rules:
-- The query MUST be read-only (MATCH/RETURN/WHERE/WITH/ORDER BY/LIMIT only).
+- The query MUST be read-only (MATCH/RETURN/WHERE/WITH/ORDER BY/LIMIT/UNWIND only).
 - Never use CREATE, MERGE, DELETE, SET, or any write clause.
+- Cypher has NO "GROUP BY" clause. To aggregate, list the grouping keys and
+  aggregation functions (e.g. count(*), collect(...)) together in the same
+  RETURN (or WITH) clause - grouping is implicit from the non-aggregate keys.
+  Example: "MATCH (n) RETURN head(labels(n)) AS label, count(*) AS count"
+- To combine multiple queries with different RETURN shapes, use UNION ALL,
+  but each side must be a complete, independently valid query
+  (its own MATCH ... RETURN ...) - never split a single RETURN across a UNION.
 - Use parameters for literal values from the question where useful.
 - Return JSON only, no markdown fences, no commentary.
 """

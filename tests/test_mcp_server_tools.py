@@ -101,6 +101,20 @@ async def test_ask_graph_runs_generated_cypher():
 
 
 @pytest.mark.asyncio
+async def test_ask_graph_wraps_neo4j_syntax_error():
+    from neo4j.exceptions import Neo4jError
+
+    patcher, client = _patch_client()
+    client.run_read_query = AsyncMock(side_effect=Neo4jError("Invalid input 'GROUP'"))
+
+    with patcher, patch.object(server, "question_to_cypher", return_value=("MATCH (n) RETURN n GROUP BY n", {})):
+        with pytest.raises(ValueError, match="Generated query failed"):
+            await server.ask_graph("what's in this graph?")
+
+    client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_submit_feedback_stores_and_returns_id():
     patcher, client = _patch_client()
     client.setup_schema = AsyncMock()
