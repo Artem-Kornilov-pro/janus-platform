@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QWheelEvent
 from PyQt6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsLineItem,
@@ -20,6 +20,47 @@ from async_runner import AsyncRunner
 from graph_layout import build_graph_elements, circular_layout
 
 NODE_RADIUS = 28
+ZOOM_FACTOR = 1.25
+MIN_ZOOM = 0.1
+MAX_ZOOM = 10.0
+
+
+class ZoomableGraphView(QGraphicsView):
+    """QGraphicsView with mouse-wheel and button-driven zoom."""
+
+    def __init__(self, scene: QGraphicsScene) -> None:
+        super().__init__(scene)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+        self._zoom = 1.0
+
+    def wheelEvent(self, event: QWheelEvent) -> None:  # noqa: N802 - Qt override
+        if event.angleDelta().y() > 0:
+            self.zoom_in()
+        else:
+            self.zoom_out()
+        event.accept()
+
+    def zoom_in(self) -> None:
+        self._apply_zoom(ZOOM_FACTOR)
+
+    def zoom_out(self) -> None:
+        self._apply_zoom(1 / ZOOM_FACTOR)
+
+    def _apply_zoom(self, factor: float) -> None:
+        new_zoom = self._zoom * factor
+        if new_zoom < MIN_ZOOM or new_zoom > MAX_ZOOM:
+            return
+        self._zoom = new_zoom
+        self.scale(factor, factor)
+
+    def reset_zoom(self) -> None:
+        self._zoom = 1.0
+        self.resetTransform()
+        if not self.scene().sceneRect().isEmpty():
+            self.fitInView(self.scene().sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
 
 class GraphTab(QWidget):
@@ -33,17 +74,28 @@ class GraphTab(QWidget):
         self.refresh_button = QPushButton("Обновить граф")
         self.refresh_button.clicked.connect(self.refresh)
 
+        self.zoom_in_button = QPushButton("+")
+        self.zoom_in_button.setFixedWidth(32)
+        self.zoom_out_button = QPushButton("-")
+        self.zoom_out_button.setFixedWidth(32)
+        self.zoom_reset_button = QPushButton("100%")
+
         self.status_label = QLabel("Нажмите «Обновить граф», чтобы загрузить данные")
 
         top_row = QHBoxLayout()
         top_row.addWidget(self.refresh_button)
+        top_row.addWidget(self.zoom_in_button)
+        top_row.addWidget(self.zoom_out_button)
+        top_row.addWidget(self.zoom_reset_button)
         top_row.addWidget(self.status_label)
         top_row.addStretch(1)
 
         self.scene = QGraphicsScene()
-        self.view = QGraphicsView(self.scene)
-        self.view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.view = ZoomableGraphView(self.scene)
+
+        self.zoom_in_button.clicked.connect(self.view.zoom_in)
+        self.zoom_out_button.clicked.connect(self.view.zoom_out)
+        self.zoom_reset_button.clicked.connect(self.view.reset_zoom)
 
         layout = QVBoxLayout()
         layout.addLayout(top_row)
@@ -126,4 +178,4 @@ class GraphTab(QWidget):
             self.scene.addItem(text)
 
         self.view.setSceneRect(self.scene.itemsBoundingRect().adjusted(-50, -50, 50, 50))
-        self.view.fitInView(self.view.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        self.view.reset_zoom()
