@@ -4,8 +4,10 @@ import json
 
 from PyQt6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QHBoxLayout,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -16,6 +18,7 @@ from PyQt6.QtWidgets import (
 
 import mcp_client
 from async_runner import AsyncRunner
+from export_utils import rows_to_csv
 
 ENTITY_LABELS = ["Party", "Obligation", "Risk", "LegalNorm"]
 
@@ -38,10 +41,14 @@ class EntitiesTab(QWidget):
         self.search_button = QPushButton("Поиск")
         self.search_button.clicked.connect(self._search)
 
+        self.export_button = QPushButton("Экспорт в CSV")
+        self.export_button.clicked.connect(self._export_csv)
+
         search_row = QHBoxLayout()
         search_row.addWidget(self.label_combo)
         search_row.addWidget(self.name_input)
         search_row.addWidget(self.search_button)
+        search_row.addWidget(self.export_button)
 
         self.table = QTableWidget()
         self.table.setColumnCount(0)
@@ -68,6 +75,32 @@ class EntitiesTab(QWidget):
         self.search_button.setEnabled(False)
         call_id = self._runner.submit(lambda: mcp_client.get_entity_by_label(label, name))
         self._pending[call_id] = "search"
+
+    def _export_csv(self) -> None:
+        if self.table.rowCount() == 0 or self.table.columnCount() == 0:
+            QMessageBox.information(self, "Экспорт в CSV", "Нет данных для экспорта. Сначала выполните поиск.")
+            return
+
+        path, _ = QFileDialog.getSaveFileName(self, "Сохранить как CSV", "", "CSV files (*.csv)")
+        if not path:
+            return
+
+        columns = [
+            self.table.horizontalHeaderItem(col).text() for col in range(self.table.columnCount())
+        ]
+        rows = []
+        for row_idx in range(self.table.rowCount()):
+            row = []
+            for col_idx in range(self.table.columnCount()):
+                item = self.table.item(row_idx, col_idx)
+                row.append(item.text() if item is not None else "")
+            rows.append(row)
+
+        csv_text = rows_to_csv(columns, rows)
+        with open(path, "w", encoding="utf-8-sig", newline="") as f:
+            f.write(csv_text)
+
+        QMessageBox.information(self, "Экспорт в CSV", f"Сохранено: {path}")
 
     def _show_relationships(self) -> None:
         row = self.table.currentRow()
