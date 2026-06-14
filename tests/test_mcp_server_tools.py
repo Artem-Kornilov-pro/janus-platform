@@ -36,6 +36,36 @@ async def test_find_relationships_closes_client():
     client.close.assert_awaited_once()
 
 
+def test_calculate_vat_from_net():
+    result = server.calculate_vat(1000, 20)
+
+    assert result == {"net_amount": 1000.0, "vat_rate": 20, "vat_amount": 200.0, "gross_amount": 1200.0}
+
+
+def test_calculate_vat_from_gross():
+    result = server.calculate_vat(1200, 20, amount_includes_vat=True)
+
+    assert result == {"net_amount": 1000.0, "vat_rate": 20, "vat_amount": 200.0, "gross_amount": 1200.0}
+
+
+def test_calculate_usn_tax():
+    result = server.calculate_usn_tax(100_000, rate=6.0)
+
+    assert result == {"income": 100_000, "rate": 6.0, "tax": 6000.0}
+
+
+@pytest.mark.asyncio
+async def test_list_invoices_closes_client():
+    patcher, client = _patch_client()
+    client.list_invoices = AsyncMock(return_value=[{"number": "7-2026", "amount": 120000.0}])
+
+    with patcher:
+        result = await server.list_invoices()
+
+    assert result == [{"number": "7-2026", "amount": 120000.0}]
+    client.close.assert_awaited_once()
+
+
 @pytest.mark.asyncio
 async def test_extract_from_text_builds_and_writes_graph():
     patcher, client = _patch_client()

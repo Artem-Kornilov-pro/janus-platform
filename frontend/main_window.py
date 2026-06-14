@@ -6,6 +6,7 @@ from async_runner import AsyncRunner
 from pages.chat_tab import ChatTab
 from pages.documents_tab import DocumentsTab
 from pages.entities_tab import EntitiesTab
+from pages.finance_tab import FinanceTab
 from pages.graph_tab import GraphTab
 from pages.learning_tab import LearningTab
 
@@ -24,6 +25,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(EntitiesTab(self.runner), "Сущности")
         tabs.addTab(GraphTab(self.runner), "Граф")
         tabs.addTab(LearningTab(self.runner), "Learning Brain")
+        tabs.addTab(FinanceTab(self.runner), "Финансы")
         self.setCentralWidget(tabs)
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt override

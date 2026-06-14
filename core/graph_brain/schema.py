@@ -8,6 +8,7 @@ Nodes:
     Risk           - a potential legal/financial risk identified in a clause
     LegalNorm      - a reference to a law/article/regulation
     CourtDecision  - a court ruling that may serve as precedent
+    Invoice        - a счёт на оплату (invoice) mentioned in a clause
 
 Relationships:
     (Document)-[:CONTAINS]->(Clause)
@@ -19,6 +20,9 @@ Relationships:
     (Obligation)-[:OBLIGATES]->(Party)   # owed-to direction, see graph_rag
     (Clause)-[:HAS_RISK]->(Risk)
     (Document)-[:INVOLVES]->(Party)
+    (Clause)-[:CONTAINS]->(Invoice)
+    (Party)-[:ISSUES]->(Invoice)
+    (Invoice)-[:BILLED_TO]->(Party)
 """
 
 NODE_LABELS = (
@@ -29,6 +33,7 @@ NODE_LABELS = (
     "Risk",
     "LegalNorm",
     "CourtDecision",
+    "Invoice",
 )
 
 RELATIONSHIP_TYPES = (
@@ -40,6 +45,8 @@ RELATIONSHIP_TYPES = (
     "OBLIGATES",
     "HAS_RISK",
     "INVOLVES",
+    "ISSUES",
+    "BILLED_TO",
 )
 
 # Cypher statements to set up uniqueness constraints and indexes.
@@ -65,6 +72,9 @@ CONSTRAINT_STATEMENTS = (
 
     "CREATE CONSTRAINT court_decision_id IF NOT EXISTS "
     "FOR (cd:CourtDecision) REQUIRE cd.id IS UNIQUE",
+
+    "CREATE CONSTRAINT invoice_id IF NOT EXISTS "
+    "FOR (i:Invoice) REQUIRE i.id IS UNIQUE",
 )
 
 # Additional full-text indexes for search over clause/risk text.

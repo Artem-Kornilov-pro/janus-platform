@@ -25,9 +25,14 @@ You are a legal analysis engine. Given a clause from a contract, extract:
 - risks: list of {"description": string, "severity": "low"|"medium"|"high"}
 - referenced_norms: list of {"code": string, "description": string}   // laws/articles mentioned
 - violated_norms: list of {"code": string, "description": string, "reason": string}
+- invoices: list of {"number": string, "amount": number, "currency": string, "vat_rate": number,
+  "due_date": string, "issuer_party": string, "payer_party": string}
+  // счета на оплату (invoices/bills) mentioned in the clause. amount is the total
+  // (gross, including VAT if applicable) numeric amount. vat_rate is a percentage
+  // (0, 10 or 20), or -1 if not specified. due_date is an ISO date string or "" if unknown.
 
 Return JSON only, matching this schema exactly, no markdown fences:
-{"obligations": [...], "risks": [...], "referenced_norms": [...], "violated_norms": [...]}
+{"obligations": [...], "risks": [...], "referenced_norms": [...], "violated_norms": [...], "invoices": [...]}
 
 If a category is empty, return an empty list for it.
 """
@@ -53,11 +58,22 @@ class ViolatedNorm(LegalNorm):
     reason: str
 
 
+class Invoice(BaseModel):
+    number: str
+    amount: float
+    currency: str = ""
+    vat_rate: float = -1
+    due_date: str = ""
+    issuer_party: str = ""
+    payer_party: str = ""
+
+
 class ClauseAnalysis(BaseModel):
     obligations: list[Obligation] = []
     risks: list[Risk] = []
     referenced_norms: list[LegalNorm] = []
     violated_norms: list[ViolatedNorm] = []
+    invoices: list[Invoice] = []
 
 
 def analyze_clause(
@@ -87,6 +103,10 @@ def _obligation_id(clause_id: str, index: int) -> str:
 
 def _risk_id(clause_id: str, index: int) -> str:
     return f"{clause_id}:risk:{index}"
+
+
+def _invoice_id(clause_id: str, index: int) -> str:
+    return f"{clause_id}:invoice:{index}"
 
 
 def build_graph(
@@ -216,6 +236,49 @@ def build_graph(
                 "to_label": "LegalNorm", "to_key": "code", "to_value": norm.code,
                 "rel_type": "REFERENCES",
             })
+
+        for j, invoice in enumerate(analysis.invoices):
+            invoice_id = _invoice_id(clause_id, j)
+            nodes.append({
+                "label": "Invoice",
+                "key_property": "id",
+                "key_value": invoice_id,
+                "properties": {
+                    "number": invoice.number,
+                    "amount": invoice.amount,
+                    "currency": invoice.currency,
+                    "vat_rate": invoice.vat_rate,
+                    "due_date": invoice.due_date,
+                },
+            })
+            relationships.append({
+                "from_label": "Clause", "from_key": "id", "from_value": clause_id,
+                "to_label": "Invoice", "to_key": "id", "to_value": invoice_id,
+                "rel_type": "CONTAINS",
+            })
+
+            for party_name in (invoice.issuer_party, invoice.payer_party):
+                if not party_name:
+                    continue
+                nodes.append({
+                    "label": "Party",
+                    "key_property": "name",
+                    "key_value": party_name,
+                    "properties": {"name": party_name},
+                })
+
+            if invoice.issuer_party:
+                relationships.append({
+                    "from_label": "Party", "from_key": "name", "from_value": invoice.issuer_party,
+                    "to_label": "Invoice", "to_key": "id", "to_value": invoice_id,
+                    "rel_type": "ISSUES",
+                })
+            if invoice.payer_party:
+                relationships.append({
+                    "from_label": "Invoice", "from_key": "id", "from_value": invoice_id,
+                    "to_label": "Party", "to_key": "name", "to_value": invoice.payer_party,
+                    "rel_type": "BILLED_TO",
+                })
 
         for norm in analysis.violated_norms:
             nodes.append({
