@@ -72,6 +72,36 @@ def build_graph_elements(relationships: list[dict[str, Any]]) -> tuple[dict[str,
     return nodes, edges
 
 
+def describe_node_connections(key: str, nodes: dict[str, dict], edges: list[dict]) -> str:
+    """Build a human-readable description of a node and its connections."""
+    node = nodes.get(key)
+    if node is None:
+        return "Узел не найден"
+
+    lines = [node["display"].replace("\n", " "), ""]
+
+    connections: list[str] = []
+    for edge in edges:
+        if edge["source"] == key:
+            other = nodes.get(edge["target"])
+            if other is None:
+                continue
+            connections.append(f"-> {edge['label']} -> {other['display'].replace(chr(10), ' ')}")
+        elif edge["target"] == key:
+            other = nodes.get(edge["source"])
+            if other is None:
+                continue
+            connections.append(f"<- {edge['label']} <- {other['display'].replace(chr(10), ' ')}")
+
+    if connections:
+        lines.append(f"Связи ({len(connections)}):")
+        lines.extend(connections)
+    else:
+        lines.append("Связей не найдено")
+
+    return "\n".join(lines)
+
+
 def circular_layout(node_keys: list[str], radius: float = 250.0) -> dict[str, tuple[float, float]]:
     """Place nodes evenly around a circle, returning key -> (x, y)."""
     count = len(node_keys)

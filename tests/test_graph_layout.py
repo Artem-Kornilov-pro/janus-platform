@@ -1,6 +1,6 @@
 import math
 
-from frontend.graph_layout import build_graph_elements, circular_layout
+from frontend.graph_layout import build_graph_elements, circular_layout, describe_node_connections
 
 
 def test_build_graph_elements_creates_nodes_and_edges():
@@ -69,6 +69,42 @@ def test_build_graph_elements_empty_input():
 
     assert nodes == {}
     assert edges == []
+
+
+def test_describe_node_connections_lists_edges():
+    relationships = [
+        {
+            "source_labels": ["Party"], "source": {"name": "ООО Альфа"},
+            "relationship": "OBLIGATES",
+            "target_labels": ["Obligation"], "target": {"id": "obl-1", "description": "поставить"},
+        },
+        {
+            "source_labels": ["Document"], "source": {"id": "doc-1"},
+            "relationship": "INVOLVES",
+            "target_labels": ["Party"], "target": {"name": "ООО Альфа"},
+        },
+    ]
+
+    nodes, edges = build_graph_elements(relationships)
+
+    description = describe_node_connections("Party:ООО Альфа", nodes, edges)
+
+    assert "ООО Альфа" in description
+    assert "Связи (2):" in description
+    assert "-> OBLIGATES ->" in description
+    assert "<- INVOLVES <-" in description
+
+
+def test_describe_node_connections_no_edges():
+    nodes = {"Party:Acme": {"label": "Party", "display": "Acme\n(Party)", "color": "#ffb84d"}}
+
+    description = describe_node_connections("Party:Acme", nodes, [])
+
+    assert "Связей не найдено" in description
+
+
+def test_describe_node_connections_unknown_key():
+    assert describe_node_connections("Missing:x", {}, []) == "Узел не найден"
 
 
 def test_circular_layout_empty():

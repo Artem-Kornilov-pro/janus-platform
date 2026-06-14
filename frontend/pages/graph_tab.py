@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QWheelEvent
 from PyQt6.QtWidgets import (
     QGraphicsEllipseItem,
+    QGraphicsItem,
     QGraphicsLineItem,
     QGraphicsScene,
     QGraphicsSimpleTextItem,
@@ -11,13 +12,14 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
 import mcp_client
 from async_runner import AsyncRunner
-from graph_layout import build_graph_elements, circular_layout
+from graph_layout import build_graph_elements, circular_layout, describe_node_connections
 
 NODE_RADIUS = 28
 ZOOM_FACTOR = 1.25
@@ -70,6 +72,8 @@ class GraphTab(QWidget):
         super().__init__()
         self._runner = runner
         self._pending: dict[str, str] = {}
+        self._nodes: dict[str, dict] = {}
+        self._edges: list[dict] = []
 
         self.refresh_button = QPushButton("Обновить граф")
         self.refresh_button.clicked.connect(self.refresh)
@@ -97,11 +101,18 @@ class GraphTab(QWidget):
         self.zoom_out_button.clicked.connect(self.view.zoom_out)
         self.zoom_reset_button.clicked.connect(self.view.reset_zoom)
 
+        self.info_panel = QTextEdit()
+        self.info_panel.setReadOnly(True)
+        self.info_panel.setPlaceholderText("Нажмите на узел графа, чтобы увидеть информацию о нём")
+        self.info_panel.setFixedHeight(120)
+
         layout = QVBoxLayout()
         layout.addLayout(top_row)
         layout.addWidget(self.view)
+        layout.addWidget(self.info_panel)
         self.setLayout(layout)
 
+        self.scene.selectionChanged.connect(self._on_node_selected)
         self._runner.finished.connect(self._on_finished)
 
     def refresh(self) -> None:
@@ -126,8 +137,20 @@ class GraphTab(QWidget):
         self._draw(nodes, edges)
         self.status_label.setText(f"Узлов: {len(nodes)}, связей: {len(edges)}")
 
+    def _on_node_selected(self) -> None:
+        items = self.scene.selectedItems()
+        if not items:
+            return
+        key = items[0].data(0)
+        if key is None:
+            return
+        self.info_panel.setPlainText(describe_node_connections(key, self._nodes, self._edges))
+
     def _draw(self, nodes: dict[str, dict], edges: list[dict]) -> None:
         self.scene.clear()
+        self._nodes = nodes
+        self._edges = edges
+        self.info_panel.clear()
 
         if not nodes:
             self.scene.addText("Граф пуст")
@@ -168,6 +191,8 @@ class GraphTab(QWidget):
             )
             ellipse.setBrush(QBrush(QColor(node["color"])))
             ellipse.setPen(QPen(QColor("#1e1f26"), 2))
+            ellipse.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+            ellipse.setData(0, key)
             self.scene.addItem(ellipse)
 
             text = QGraphicsSimpleTextItem(node["display"])
