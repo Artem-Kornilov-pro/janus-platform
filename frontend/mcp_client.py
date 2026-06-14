@@ -81,7 +81,10 @@ async def find_relationships(source: str, target: str) -> Any:
 
 
 async def list_invoices() -> Any:
-    return await call_tool("list_invoices")
+    result = await call_tool("list_invoices")
+    if isinstance(result, dict):
+        return [result]
+    return result
 
 
 async def calculate_vat(amount: float, vat_rate: float, amount_includes_vat: bool = False) -> Any:
