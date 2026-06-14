@@ -70,3 +70,47 @@ def test_build_graph_creates_document_party_and_clause_nodes():
     assert ("Document", "CONTAINS", "Clause") in rel_types
     assert ("Document", "INVOLVES", "Party") in rel_types
     assert ("Clause", "HAS_RISK", "Risk") in rel_types
+
+
+def test_build_graph_creates_invoice_nodes_and_relationships():
+    clause_payload = {
+        "obligations": [],
+        "risks": [],
+        "referenced_norms": [],
+        "violated_norms": [],
+        "invoices": [
+            {
+                "number": "7-2026",
+                "amount": 120000.0,
+                "currency": "RUB",
+                "vat_rate": 20,
+                "due_date": "2026-02-01",
+                "issuer_party": "ООО Альфа",
+                "payer_party": "ООО Бета",
+            }
+        ],
+    }
+    client = _mock_client(clause_payload)
+
+    document = StructuredDocument(
+        document_type="contract",
+        title="Supply Agreement",
+        parties=["ООО Альфа", "ООО Бета"],
+        dates=["2026-01-01"],
+        sections=[
+            DocumentSection(title="Payment", content="Pay invoice 7-2026.", section_type="terms"),
+        ],
+        summary="Supply agreement.",
+    )
+
+    nodes, relationships = build_graph("doc-1", document, client=client)
+
+    invoice_nodes = [n for n in nodes if n["label"] == "Invoice"]
+    assert len(invoice_nodes) == 1
+    assert invoice_nodes[0]["properties"]["number"] == "7-2026"
+    assert invoice_nodes[0]["properties"]["amount"] == 120000.0
+
+    rel_types = {(r["from_label"], r["rel_type"], r["to_label"]) for r in relationships}
+    assert ("Clause", "CONTAINS", "Invoice") in rel_types
+    assert ("Party", "ISSUES", "Invoice") in rel_types
+    assert ("Invoice", "BILLED_TO", "Party") in rel_types

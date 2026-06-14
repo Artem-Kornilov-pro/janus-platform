@@ -17,6 +17,7 @@ NODE_COLORS: dict[str, str] = {
     "Risk": "#ff6b6b",
     "LegalNorm": "#6bd3ff",
     "CourtDecision": "#c0c4cc",
+    "Invoice": "#ffd166",
 }
 DEFAULT_NODE_COLOR = "#8a8d99"
 

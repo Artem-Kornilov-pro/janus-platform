@@ -20,7 +20,7 @@ import mcp_client
 from async_runner import AsyncRunner
 from export_utils import rows_to_csv
 
-ENTITY_LABELS = ["Party", "Obligation", "Risk", "LegalNorm"]
+ENTITY_LABELS = ["Party", "Obligation", "Risk", "LegalNorm", "Invoice"]
 
 
 class EntitiesTab(QWidget):
