@@ -6,6 +6,7 @@ from async_runner import AsyncRunner
 from pages.chat_tab import ChatTab
 from pages.documents_tab import DocumentsTab
 from pages.entities_tab import EntitiesTab
+from pages.graph_tab import GraphTab
 from pages.learning_tab import LearningTab
 
 
@@ -21,6 +22,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(ChatTab(self.runner), "Чат")
         tabs.addTab(DocumentsTab(self.runner), "Документы")
         tabs.addTab(EntitiesTab(self.runner), "Сущности")
+        tabs.addTab(GraphTab(self.runner), "Граф")
         tabs.addTab(LearningTab(self.runner), "Learning Brain")
         self.setCentralWidget(tabs)
 
