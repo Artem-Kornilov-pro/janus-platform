@@ -27,7 +27,9 @@ from __future__ import annotations
 import os
 import uuid
 
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from neo4j.exceptions import Neo4jError
 
 from core.document_brain.structurer import structure_text
 from core.graph_brain.graph_rag import build_graph
@@ -38,6 +40,8 @@ from core.learning_brain.feedback_model import Feedback, list_feedback, store_fe
 from core.learning_brain.prompt_optimizer import retrain_prompts
 from core.learning_brain.reward_model import compute_stats
 from core.mcp_fabric.nl2cypher import question_to_cypher
+
+load_dotenv()
 
 mcp = FastMCP(
     "janus-lex-graph",
@@ -118,6 +122,8 @@ async def ask_graph(question: str) -> list[dict]:
     client = _get_client()
     try:
         return await client.run_read_query(cypher, parameters)
+    except Neo4jError as exc:
+        raise ValueError(f"Generated query failed: {exc.message} (cypher: {cypher})") from exc
     finally:
         await client.close()
 

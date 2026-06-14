@@ -158,36 +158,58 @@ class Neo4jClient:
             return [record.data() async for record in result]
 
     async def get_entity_by_label(self, label: str, name: str) -> list[dict[str, Any]]:
-        """Find nodes of a given label whose name/title/id/code contains `name`."""
-        query = (
-            f"MATCH (n:{label}) "
-            "WHERE toLower(coalesce(n.name, '')) CONTAINS toLower($name) "
-            "   OR toLower(coalesce(n.title, '')) CONTAINS toLower($name) "
-            "   OR toLower(coalesce(n.id, '')) CONTAINS toLower($name) "
-            "   OR toLower(coalesce(n.code, '')) CONTAINS toLower($name) "
-            "RETURN n"
-        )
+        """Find nodes of a given label whose name/title/id/code contains `name`.
+
+        A `name` of "*" or "" matches all nodes of the label.
+        """
+        if name in ("*", ""):
+            query = f"MATCH (n:{label}) RETURN n"
+            params: dict[str, Any] = {}
+        else:
+            query = (
+                f"MATCH (n:{label}) "
+                "WHERE toLower(coalesce(n.name, '')) CONTAINS toLower($name) "
+                "   OR toLower(coalesce(n.title, '')) CONTAINS toLower($name) "
+                "   OR toLower(coalesce(n.id, '')) CONTAINS toLower($name) "
+                "   OR toLower(coalesce(n.code, '')) CONTAINS toLower($name) "
+                "RETURN n"
+            )
+            params = {"name": name}
+
         async with self._driver.session(database=self._database) as session:
-            result = await session.run(query, name=name)
+            result = await session.run(query, **params)
             return [dict(record["n"]) async for record in result]
 
     async def find_relationships(self, source: str, target: str) -> list[dict[str, Any]]:
-        """Find relationships between any nodes matching `source` and `target` by name/title/id/code."""
+        """Find relationships between any nodes matching `source` and `target` by name/title/id/code.
+
+        A `source`/`target` of "*" or "" matches any node.
+        """
+
+        def _match_clause(var: str, value: str) -> str:
+            if value in ("*", ""):
+                return "true"
+            return (
+                f"(toLower(coalesce({var}.name, '')) CONTAINS toLower(${var})"
+                f" OR toLower(coalesce({var}.title, '')) CONTAINS toLower(${var})"
+                f" OR toLower(coalesce({var}.id, '')) CONTAINS toLower(${var})"
+                f" OR toLower(coalesce({var}.code, '')) CONTAINS toLower(${var}))"
+            )
+
         query = (
             "MATCH (a)-[r]->(b) "
-            "WHERE (toLower(coalesce(a.name, '')) CONTAINS toLower($source) "
-            "       OR toLower(coalesce(a.title, '')) CONTAINS toLower($source) "
-            "       OR toLower(coalesce(a.id, '')) CONTAINS toLower($source) "
-            "       OR toLower(coalesce(a.code, '')) CONTAINS toLower($source)) "
-            "  AND (toLower(coalesce(b.name, '')) CONTAINS toLower($target) "
-            "       OR toLower(coalesce(b.title, '')) CONTAINS toLower($target) "
-            "       OR toLower(coalesce(b.id, '')) CONTAINS toLower($target) "
-            "       OR toLower(coalesce(b.code, '')) CONTAINS toLower($target)) "
+            f"WHERE {_match_clause('a', source)} AND {_match_clause('b', target)} "
             "RETURN labels(a) AS source_labels, a AS source, type(r) AS relationship, "
             "       labels(b) AS target_labels, b AS target"
         )
+        params: dict[str, Any] = {}
+        if source not in ("*", ""):
+            params["a"] = source
+        if target not in ("*", ""):
+            params["b"] = target
+
         async with self._driver.session(database=self._database) as session:
-            result = await session.run(query, source=source, target=target)
+            result = await session.run(query, **params)
             return [record.data() async for record in result]
 
     async def run_read_query(self, cypher: str, parameters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
