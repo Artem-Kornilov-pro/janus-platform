@@ -25,7 +25,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(EntitiesTab(self.runner), "Сущности")
         tabs.addTab(GraphTab(self.runner), "Граф")
         tabs.addTab(LearningTab(self.runner), "Learning Brain")
-        tabs.addTab(FinanceTab(), "Финансы")
+        tabs.addTab(FinanceTab(self.runner), "Финансы")
         self.setCentralWidget(tabs)
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt override

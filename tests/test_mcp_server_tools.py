@@ -37,6 +37,18 @@ async def test_find_relationships_closes_client():
 
 
 @pytest.mark.asyncio
+async def test_list_invoices_closes_client():
+    patcher, client = _patch_client()
+    client.list_invoices = AsyncMock(return_value=[{"number": "7-2026", "amount": 120000.0}])
+
+    with patcher:
+        result = await server.list_invoices()
+
+    assert result == [{"number": "7-2026", "amount": 120000.0}]
+    client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_extract_from_text_builds_and_writes_graph():
     patcher, client = _patch_client()
     client.setup_schema = AsyncMock()

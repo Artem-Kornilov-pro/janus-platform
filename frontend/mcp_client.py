@@ -80,6 +80,10 @@ async def find_relationships(source: str, target: str) -> Any:
     return await call_tool("find_relationships", {"source": source, "target": target})
 
 
+async def list_invoices() -> Any:
+    return await call_tool("list_invoices")
+
+
 async def extract_from_text(text: str, document_id: str | None = None) -> Any:
     args: dict[str, Any] = {"text": text}
     if document_id:

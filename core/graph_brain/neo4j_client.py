@@ -180,6 +180,21 @@ class Neo4jClient:
             result = await session.run(query, **params)
             return [dict(record["n"]) async for record in result]
 
+    async def list_invoices(self) -> list[dict[str, Any]]:
+        """Return all Invoice nodes with their issuer/payer parties, for reporting."""
+        query = (
+            "MATCH (i:Invoice) "
+            "OPTIONAL MATCH (issuer:Party)-[:ISSUES]->(i) "
+            "OPTIONAL MATCH (i)-[:BILLED_TO]->(payer:Party) "
+            "RETURN i.number AS number, i.amount AS amount, i.currency AS currency, "
+            "       i.vat_rate AS vat_rate, i.due_date AS due_date, "
+            "       issuer.name AS issuer, payer.name AS payer "
+            "ORDER BY i.due_date"
+        )
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query)
+            return [record.data() async for record in result]
+
     async def find_relationships(self, source: str, target: str) -> list[dict[str, Any]]:
         """Find relationships between any nodes matching `source` and `target` by name/title/id/code.
 

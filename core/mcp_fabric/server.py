@@ -82,6 +82,16 @@ async def find_relationships(source: str, target: str) -> list[dict]:
 
 
 @mcp.tool()
+async def list_invoices() -> list[dict]:
+    """Return all Invoice entities with their issuer/payer parties, for finance reporting."""
+    client = _get_client()
+    try:
+        return await client.list_invoices()
+    finally:
+        await client.close()
+
+
+@mcp.tool()
 async def extract_from_text(text: str, document_id: str | None = None) -> dict:
     """Run the Document Brain + Graph Brain pipeline on raw text and write the result to the graph.
 

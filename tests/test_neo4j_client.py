@@ -155,6 +155,20 @@ async def test_list_documents_returns_records():
 
 
 @pytest.mark.asyncio
+async def test_list_invoices_returns_records():
+    record = MagicMock()
+    record.data.return_value = {"number": "7-2026", "amount": 120000.0, "issuer": "ООО Альфа", "payer": "ООО Бета"}
+    client, session = _make_client_with_session()
+    session.run = AsyncMock(return_value=_records([record]))
+
+    result = await client.list_invoices()
+
+    assert result == [{"number": "7-2026", "amount": 120000.0, "issuer": "ООО Альфа", "payer": "ООО Бета"}]
+    args, _ = session.run.call_args
+    assert "MATCH (i:Invoice)" in args[0]
+
+
+@pytest.mark.asyncio
 async def test_get_entity_by_label_returns_node_dicts():
     record = {"n": {"id": "party-1", "name": "Acme"}}
     client, session = _make_client_with_session()
