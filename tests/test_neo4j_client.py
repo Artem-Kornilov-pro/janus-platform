@@ -179,7 +179,7 @@ async def test_find_relationships_returns_records():
 
     assert result == [{"relationship": "HAS_RISK"}]
     args, kwargs = session.run.call_args
-    assert kwargs == {"source": "Acme", "target": "late fee"}
+    assert kwargs == {"a": "Acme", "b": "late fee"}
 
 
 @pytest.mark.asyncio
