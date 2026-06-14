@@ -37,16 +37,27 @@ def complete(
     max_output_tokens: int = 4096,
     temperature: float = 0.3,
     client: openai.OpenAI | None = None,
+    retries: int = 2,
 ) -> str:
-    """Run a single instruction/input completion and return the raw text output."""
+    """Run a single instruction/input completion and return the raw text output.
+
+    Retries once (by default) if the model returns an empty output - this can
+    happen when a reasoning model spends its whole token budget "thinking"
+    and leaves nothing for the final answer.
+    """
     client = client or get_client()
 
-    response = client.responses.create(
-        model=_model_uri(),
-        temperature=temperature,
-        instructions=instructions,
-        input=input_text,
-        max_output_tokens=max_output_tokens,
-    )
+    last_text = ""
+    for attempt in range(retries + 1):
+        response = client.responses.create(
+            model=_model_uri(),
+            temperature=temperature,
+            instructions=instructions,
+            input=input_text,
+            max_output_tokens=max_output_tokens,
+        )
+        last_text = response.output_text
+        if last_text.strip():
+            return last_text
 
-    return response.output_text
+    return last_text
