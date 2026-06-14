@@ -84,6 +84,17 @@ async def list_invoices() -> Any:
     return await call_tool("list_invoices")
 
 
+async def calculate_vat(amount: float, vat_rate: float, amount_includes_vat: bool = False) -> Any:
+    return await call_tool(
+        "calculate_vat",
+        {"amount": amount, "vat_rate": vat_rate, "amount_includes_vat": amount_includes_vat},
+    )
+
+
+async def calculate_usn_tax(income: float, rate: float = 6.0) -> Any:
+    return await call_tool("calculate_usn_tax", {"income": income, "rate": rate})
+
+
 async def extract_from_text(text: str, document_id: str | None = None) -> Any:
     args: dict[str, Any] = {"text": text}
     if document_id:

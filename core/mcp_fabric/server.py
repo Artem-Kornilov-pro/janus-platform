@@ -13,6 +13,9 @@ Tools:
     ingest_folder(path)                 - extract, chunk and graph all documents in a folder
     get_ingestion_status(job_id)        - status of an ingestion job
     list_documents()                    - all ingested documents
+    list_invoices()                     - all Invoice entities with issuer/payer parties
+    calculate_vat(amount, vat_rate)     - VAT (НДС) breakdown for an amount
+    calculate_usn_tax(income, rate)     - УСН "доходы" tax for an income
 
 Environment variables:
     NEO4J_URI       (default: bolt://localhost:7687)
@@ -32,6 +35,7 @@ from mcp.server.fastmcp import FastMCP
 from neo4j.exceptions import Neo4jError
 
 from core.document_brain.structurer import structure_text
+from domains.finance.tax_calculator import simplified_tax, vat_from_gross, vat_from_net
 from core.graph_brain.graph_rag import build_graph
 from core.graph_brain.neo4j_client import Neo4jClient
 from core.ingestion_pipeline.batch_ingester import ingest_folder as run_ingest_folder
@@ -79,6 +83,29 @@ async def find_relationships(source: str, target: str) -> list[dict]:
         return await client.find_relationships(source, target)
     finally:
         await client.close()
+
+
+@mcp.tool()
+def calculate_vat(amount: float, vat_rate: float, amount_includes_vat: bool = False) -> dict:
+    """Calculate VAT (НДС) breakdown for an amount.
+
+    If `amount_includes_vat` is False (default), `amount` is treated as the net
+    (excl. VAT) amount. If True, `amount` is treated as the gross (incl. VAT) total.
+    Returns {"net_amount", "vat_rate", "vat_amount", "gross_amount"}.
+    """
+    result = vat_from_gross(amount, vat_rate) if amount_includes_vat else vat_from_net(amount, vat_rate)
+    return {
+        "net_amount": result.net_amount,
+        "vat_rate": result.vat_rate,
+        "vat_amount": result.vat_amount,
+        "gross_amount": result.gross_amount,
+    }
+
+
+@mcp.tool()
+def calculate_usn_tax(income: float, rate: float = 6.0) -> dict:
+    """Calculate simplified taxation system (УСН "доходы") tax for the given income and rate (percent)."""
+    return {"income": income, "rate": rate, "tax": simplified_tax(income, rate)}
 
 
 @mcp.tool()
