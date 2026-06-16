@@ -51,10 +51,14 @@ def neo4j_test_creds() -> dict[str, str]:
 
 @pytest.fixture(scope="session")
 def qt_app():
-    """Single headless QApplication for the whole test session."""
+    """Single headless QApplication for the whole test session.
+
+    Skipped automatically when PyQt6 is not installed.
+    """
     import sys
 
-    from PyQt6.QtWidgets import QApplication
+    pytest.importorskip("PyQt6", reason="PyQt6 not installed — skipping GUI tests")
+    from PyQt6.QtWidgets import QApplication  # noqa: PLC0415
 
     app = QApplication.instance() or QApplication(sys.argv)
     yield app

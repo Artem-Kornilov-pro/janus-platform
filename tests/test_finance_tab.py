@@ -1,14 +1,18 @@
 """Headless QApplication tests for FinanceTab.
 
-These tests use the session-scoped `qt_app` fixture from conftest.py and
-never display any windows, so they run on CI without a display server.
+These tests require PyQt6 (installed as an optional dependency).
+They are automatically skipped when PyQt6 is not available (e.g. on CI
+without GUI libraries).
 """
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
+
 import pytest
+
+pytest.importorskip("PyQt6", reason="PyQt6 not installed — skipping GUI tests")
 
 # Allow importing frontend modules without a display.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "frontend"))
