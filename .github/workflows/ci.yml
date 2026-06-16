@@ -70,12 +70,12 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5.11.0
+        uses: docker/metadata-action@v6.1.0
         with:
           images: ghcr.io/${{ github.repository }}
 
       - name: Build image (and push on main)
-        uses: docker/build-push-action@v6.18.0
+        uses: docker/build-push-action@v7.2.0
         with:
           context: .
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
