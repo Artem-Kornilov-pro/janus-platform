@@ -30,9 +30,16 @@ You are a legal analysis engine. Given a clause from a contract, extract:
   // счета на оплату (invoices/bills) mentioned in the clause. amount is the total
   // (gross, including VAT if applicable) numeric amount. vat_rate is a percentage
   // (0, 10 or 20), or -1 if not specified. due_date is an ISO date string or "" if unknown.
+- deadlines: list of {"description": string, "date": string, "type": "contractual"|"statutory"|"procedural",
+  "bound_party": string}
+  // explicit срок (deadline) mentioned in the clause. date is ISO string or "" if not specified.
+  // type: "contractual" = set by agreement, "statutory" = set by law, "procedural" = court/process срок.
+- claims: list of {"number": string, "description": string, "date_filed": string,
+  "deadline_response": string, "claimant_party": string, "respondent_party": string}
+  // претензии (legal claims/demands) referenced in the clause. dates are ISO strings or "".
 
 Return JSON only, matching this schema exactly, no markdown fences:
-{"obligations": [...], "risks": [...], "referenced_norms": [...], "violated_norms": [...], "invoices": [...]}
+{"obligations": [...], "risks": [...], "referenced_norms": [...], "violated_norms": [...], "invoices": [...], "deadlines": [...], "claims": [...]}
 
 If a category is empty, return an empty list for it.
 """
@@ -68,12 +75,30 @@ class Invoice(BaseModel):
     payer_party: str = ""
 
 
+class Deadline(BaseModel):
+    description: str
+    date: str = ""
+    type: str = "contractual"
+    bound_party: str = ""
+
+
+class Claim(BaseModel):
+    number: str = ""
+    description: str
+    date_filed: str = ""
+    deadline_response: str = ""
+    claimant_party: str = ""
+    respondent_party: str = ""
+
+
 class ClauseAnalysis(BaseModel):
     obligations: list[Obligation] = []
     risks: list[Risk] = []
     referenced_norms: list[LegalNorm] = []
     violated_norms: list[ViolatedNorm] = []
     invoices: list[Invoice] = []
+    deadlines: list[Deadline] = []
+    claims: list[Claim] = []
 
 
 def analyze_clause(
@@ -107,6 +132,14 @@ def _risk_id(clause_id: str, index: int) -> str:
 
 def _invoice_id(clause_id: str, index: int) -> str:
     return f"{clause_id}:invoice:{index}"
+
+
+def _deadline_id(clause_id: str, index: int) -> str:
+    return f"{clause_id}:deadline:{index}"
+
+
+def _claim_id(document_id: str, index: int) -> str:
+    return f"{document_id}:claim:{index}"
 
 
 def build_graph(
@@ -280,6 +313,36 @@ def build_graph(
                     "rel_type": "BILLED_TO",
                 })
 
+        for j, deadline in enumerate(analysis.deadlines):
+            deadline_id = _deadline_id(clause_id, j)
+            nodes.append({
+                "label": "Deadline",
+                "key_property": "id",
+                "key_value": deadline_id,
+                "properties": {
+                    "description": deadline.description,
+                    "date": deadline.date,
+                    "type": deadline.type,
+                },
+            })
+            relationships.append({
+                "from_label": "Clause", "from_key": "id", "from_value": clause_id,
+                "to_label": "Deadline", "to_key": "id", "to_value": deadline_id,
+                "rel_type": "HAS_DEADLINE",
+            })
+            if deadline.bound_party:
+                nodes.append({
+                    "label": "Party",
+                    "key_property": "name",
+                    "key_value": deadline.bound_party,
+                    "properties": {"name": deadline.bound_party},
+                })
+                relationships.append({
+                    "from_label": "Deadline", "from_key": "id", "from_value": deadline_id,
+                    "to_label": "Party", "to_key": "name", "to_value": deadline.bound_party,
+                    "rel_type": "BINDS",
+                })
+
         for norm in analysis.violated_norms:
             nodes.append({
                 "label": "LegalNorm",
@@ -293,5 +356,48 @@ def build_graph(
                 "rel_type": "VIOLATES",
                 "properties": {"reason": norm.reason},
             })
+
+    # Claims may span the whole document; run a dedicated extraction pass for
+    # documents whose type or title indicates a pretension/claim document.
+
+    if "claim" in document.document_type.lower() or "претензи" in document.title.lower():
+        for i, section in enumerate(document.sections):
+            clause_id = _clause_id(document_id, i)
+            analysis = analyze_clause(section, client=client, extra_instructions=extra_instructions)
+            for j, claim in enumerate(analysis.claims):
+                claim_id = _claim_id(document_id, j)
+                nodes.append({
+                    "label": "Claim",
+                    "key_property": "id",
+                    "key_value": claim_id,
+                    "properties": {
+                        "number": claim.number,
+                        "description": claim.description,
+                        "date_filed": claim.date_filed,
+                        "deadline_response": claim.deadline_response,
+                    },
+                })
+                relationships.append({
+                    "from_label": "Document", "from_key": "id", "from_value": document_id,
+                    "to_label": "Claim", "to_key": "id", "to_value": claim_id,
+                    "rel_type": "HAS_CLAIM",
+                })
+                for party_name, rel_type in (
+                    (claim.claimant_party, "FILED_BY"),
+                    (claim.respondent_party, "FILED_AGAINST"),
+                ):
+                    if not party_name:
+                        continue
+                    nodes.append({
+                        "label": "Party",
+                        "key_property": "name",
+                        "key_value": party_name,
+                        "properties": {"name": party_name},
+                    })
+                    relationships.append({
+                        "from_label": "Claim", "from_key": "id", "from_value": claim_id,
+                        "to_label": "Party", "to_key": "name", "to_value": party_name,
+                        "rel_type": rel_type,
+                    })
 
     return nodes, relationships

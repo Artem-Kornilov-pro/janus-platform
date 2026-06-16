@@ -8,6 +8,7 @@ from pages.documents_tab import DocumentsTab
 from pages.entities_tab import EntitiesTab
 from pages.finance_tab import FinanceTab
 from pages.graph_tab import GraphTab
+from pages.legal_tab import LegalTab
 from pages.learning_tab import LearningTab
 
 
@@ -26,6 +27,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(GraphTab(self.runner), "Граф")
         tabs.addTab(LearningTab(self.runner), "Learning Brain")
         tabs.addTab(FinanceTab(self.runner), "Финансы")
+        tabs.addTab(LegalTab(self.runner), "Юрист")
         self.setCentralWidget(tabs)
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt override

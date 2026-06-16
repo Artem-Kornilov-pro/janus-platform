@@ -137,6 +137,53 @@ class Neo4jClient:
             result = await session.run(query, document_id=document_id)
             return [record.data() async for record in result]
 
+    async def get_risk_report(self) -> list[dict[str, Any]]:
+        """All risks across all documents, ordered by severity (high first)."""
+        query = (
+            "MATCH (d:Document)-[:CONTAINS]->(c:Clause)-[:HAS_RISK]->(r:Risk) "
+            "RETURN d.id AS document_id, d.title AS document_title, "
+            "       c.title AS clause_title, r.description AS risk, r.severity AS severity "
+            "ORDER BY CASE r.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, d.title"
+        )
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query)
+            return [record.data() async for record in result]
+
+    async def get_obligations_by_party(self, party_name: str) -> list[dict[str, Any]]:
+        """All obligations where the given party is the obligated or beneficiary side."""
+        query = (
+            "MATCH (p:Party)-[:OBLIGATES]->(o:Obligation) "
+            "WHERE toLower(p.name) CONTAINS toLower($name) "
+            "OPTIONAL MATCH (o)-[:OBLIGATES]->(beneficiary:Party) "
+            "RETURN p.name AS obligated_party, o.description AS obligation, "
+            "       beneficiary.name AS beneficiary_party "
+            "UNION "
+            "MATCH (o:Obligation)-[:OBLIGATES]->(p:Party) "
+            "WHERE toLower(p.name) CONTAINS toLower($name) "
+            "OPTIONAL MATCH (obligor:Party)-[:OBLIGATES]->(o) "
+            "RETURN obligor.name AS obligated_party, o.description AS obligation, "
+            "       p.name AS beneficiary_party"
+        )
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query, name=party_name)
+            return [record.data() async for record in result]
+
+    async def get_deadlines(self, overdue_only: bool = False) -> list[dict[str, Any]]:
+        """All Deadline nodes with their clause and bound party, sorted by date."""
+        query = (
+            "MATCH (c:Clause)-[:HAS_DEADLINE]->(d:Deadline) "
+            "OPTIONAL MATCH (d)-[:BINDS]->(p:Party) "
+            "OPTIONAL MATCH (doc:Document)-[:CONTAINS]->(c) "
+            + ("WHERE d.date <> '' AND d.date < date() " if overdue_only else "")
+            + "RETURN d.id AS deadline_id, d.description AS description, d.date AS date, "
+            "       d.type AS type, p.name AS bound_party, "
+            "       c.title AS clause_title, doc.title AS document_title "
+            "ORDER BY d.date"
+        )
+        async with self._driver.session(database=self._database) as session:
+            result = await session.run(query)
+            return [record.data() async for record in result]
+
     async def find_document_by_hash(self, content_hash: str) -> dict[str, Any] | None:
         """Return the Document node with the given content_hash, if one exists."""
         query = "MATCH (d:Document {content_hash: $content_hash}) RETURN d LIMIT 1"

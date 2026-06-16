@@ -72,6 +72,46 @@ def test_build_graph_creates_document_party_and_clause_nodes():
     assert ("Clause", "HAS_RISK", "Risk") in rel_types
 
 
+def test_build_graph_creates_deadline_nodes():
+    clause_payload = {
+        "obligations": [],
+        "risks": [],
+        "referenced_norms": [],
+        "violated_norms": [],
+        "invoices": [],
+        "deadlines": [
+            {
+                "description": "Оплатить в течение 30 дней",
+                "date": "2026-07-01",
+                "type": "contractual",
+                "bound_party": "ООО Покупатель",
+            }
+        ],
+        "claims": [],
+    }
+    client = _mock_client(clause_payload)
+
+    document = StructuredDocument(
+        document_type="contract",
+        title="Supply Agreement",
+        parties=["ООО Альфа"],
+        dates=["2026-01-01"],
+        sections=[DocumentSection(title="Payment", content="Pay in 30 days.", section_type="terms")],
+        summary=".",
+    )
+
+    nodes, relationships = build_graph("doc-dl", document, client=client)
+
+    deadline_nodes = [n for n in nodes if n["label"] == "Deadline"]
+    assert len(deadline_nodes) == 1
+    assert deadline_nodes[0]["properties"]["date"] == "2026-07-01"
+    assert deadline_nodes[0]["properties"]["type"] == "contractual"
+
+    rel_types = {r["rel_type"] for r in relationships}
+    assert "HAS_DEADLINE" in rel_types
+    assert "BINDS" in rel_types
+
+
 def test_build_graph_creates_invoice_nodes_and_relationships():
     clause_payload = {
         "obligations": [],
