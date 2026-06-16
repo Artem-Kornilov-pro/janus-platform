@@ -9,6 +9,8 @@ Nodes:
     LegalNorm      - a reference to a law/article/regulation
     CourtDecision  - a court ruling that may serve as precedent
     Invoice        - a счёт на оплату (invoice) mentioned in a clause
+    Deadline       - a contractual or statutory deadline (срок)
+    Claim          - a legal claim / pretension (претензия)
 
 Relationships:
     (Document)-[:CONTAINS]->(Clause)
@@ -23,6 +25,12 @@ Relationships:
     (Clause)-[:CONTAINS]->(Invoice)
     (Party)-[:ISSUES]->(Invoice)
     (Invoice)-[:BILLED_TO]->(Party)
+    (Clause)-[:HAS_DEADLINE]->(Deadline)
+    (Deadline)-[:BINDS]->(Party)
+    (Document)-[:HAS_CLAIM]->(Claim)
+    (Claim)-[:FILED_BY]->(Party)
+    (Claim)-[:FILED_AGAINST]->(Party)
+    (Claim)-[:REFERENCES]->(Obligation)
 """
 
 NODE_LABELS = (
@@ -34,6 +42,8 @@ NODE_LABELS = (
     "LegalNorm",
     "CourtDecision",
     "Invoice",
+    "Deadline",
+    "Claim",
 )
 
 RELATIONSHIP_TYPES = (
@@ -47,6 +57,11 @@ RELATIONSHIP_TYPES = (
     "INVOLVES",
     "ISSUES",
     "BILLED_TO",
+    "HAS_DEADLINE",
+    "BINDS",
+    "HAS_CLAIM",
+    "FILED_BY",
+    "FILED_AGAINST",
 )
 
 # Cypher statements to set up uniqueness constraints and indexes.
@@ -75,6 +90,12 @@ CONSTRAINT_STATEMENTS = (
 
     "CREATE CONSTRAINT invoice_id IF NOT EXISTS "
     "FOR (i:Invoice) REQUIRE i.id IS UNIQUE",
+
+    "CREATE CONSTRAINT deadline_id IF NOT EXISTS "
+    "FOR (d:Deadline) REQUIRE d.id IS UNIQUE",
+
+    "CREATE CONSTRAINT claim_id IF NOT EXISTS "
+    "FOR (c:Claim) REQUIRE c.id IS UNIQUE",
 )
 
 # Additional full-text indexes for search over clause/risk text.

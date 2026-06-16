@@ -87,6 +87,27 @@ async def list_invoices() -> Any:
     return result
 
 
+async def get_risk_report() -> Any:
+    result = await call_tool("get_risk_report")
+    if isinstance(result, dict):
+        return [result]
+    return result or []
+
+
+async def get_obligations_by_party(party_name: str) -> Any:
+    result = await call_tool("get_obligations_by_party", {"party_name": party_name})
+    if isinstance(result, dict):
+        return [result]
+    return result or []
+
+
+async def get_deadlines(overdue_only: bool = False) -> Any:
+    result = await call_tool("get_deadlines", {"overdue_only": overdue_only})
+    if isinstance(result, dict):
+        return [result]
+    return result or []
+
+
 async def calculate_vat(amount: float, vat_rate: float, amount_includes_vat: bool = False) -> Any:
     return await call_tool(
         "calculate_vat",

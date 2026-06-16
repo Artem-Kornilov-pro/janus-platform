@@ -16,6 +16,9 @@ Tools:
     list_invoices()                     - all Invoice entities with issuer/payer parties
     calculate_vat(amount, vat_rate)     - VAT (НДС) breakdown for an amount
     calculate_usn_tax(income, rate)     - УСН "доходы" tax for an income
+    get_risk_report()                   - all risks across documents, ordered by severity
+    get_obligations_by_party(party)     - obligations where the party is obligated or beneficiary
+    get_deadlines(overdue_only)         - all deadlines (optionally only overdue)
 
 Environment variables:
     NEO4J_URI       (default: bolt://localhost:7687)
@@ -81,6 +84,47 @@ async def find_relationships(source: str, target: str) -> list[dict]:
     client = _get_client()
     try:
         return await client.find_relationships(source, target)
+    finally:
+        await client.close()
+
+
+@mcp.tool()
+async def get_risk_report() -> list[dict]:
+    """Return all risks across all documents ordered by severity (high → medium → low).
+
+    Each record contains: document_id, document_title, clause_title, risk, severity.
+    """
+    client = _get_client()
+    try:
+        return await client.get_risk_report()
+    finally:
+        await client.close()
+
+
+@mcp.tool()
+async def get_obligations_by_party(party_name: str) -> list[dict]:
+    """Return all obligations where `party_name` is either the obligated or beneficiary party.
+
+    Partial name matching is supported (case-insensitive CONTAINS).
+    Each record: obligated_party, obligation, beneficiary_party.
+    """
+    client = _get_client()
+    try:
+        return await client.get_obligations_by_party(party_name)
+    finally:
+        await client.close()
+
+
+@mcp.tool()
+async def get_deadlines(overdue_only: bool = False) -> list[dict]:
+    """Return all Deadline nodes sorted by date.
+
+    Set overdue_only=True to return only deadlines whose date is in the past.
+    Each record: deadline_id, description, date, type, bound_party, clause_title, document_title.
+    """
+    client = _get_client()
+    try:
+        return await client.get_deadlines(overdue_only=overdue_only)
     finally:
         await client.close()
 
