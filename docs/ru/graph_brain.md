@@ -9,8 +9,8 @@ Graph Brain отвечает за граф знаний Neo4j домена Lex: 
 ## Файлы
 
 - `schema.py` — онтология Lex:
-  - **Метки узлов**: `Document`, `Clause`, `Party`, `Obligation`, `Risk`, `LegalNorm`, `CourtDecision`
-  - **Типы связей**: `CONTAINS`, `REGULATES`, `VIOLATES`, `REFERENCES`, `PRECEDENT_FOR`, `OBLIGATES`, `HAS_RISK`, `INVOLVES`
+  - **Метки узлов**: `Document`, `Clause`, `Party`, `Obligation`, `Risk`, `LegalNorm`, `CourtDecision`, `Invoice`, `Deadline`, `Claim`
+  - **Типы связей**: `CONTAINS`, `REGULATES`, `VIOLATES`, `REFERENCES`, `PRECEDENT_FOR`, `OBLIGATES`, `HAS_RISK`, `INVOLVES`, `ISSUES`, `BILLED_TO`, `HAS_DEADLINE`, `BINDS`, `HAS_CLAIM`, `FILED_BY`, `FILED_AGAINST`
   - Типичные связи:
     - `(Document)-[:CONTAINS]->(Clause)`
     - `(Clause)-[:REGULATES|VIOLATES|REFERENCES]->(LegalNorm | CourtDecision)`
@@ -18,7 +18,10 @@ Graph Brain отвечает за граф знаний Neo4j домена Lex: 
     - `(Party)-[:OBLIGATES]->(Obligation)-[:OBLIGATES]->(Party)` (кто должен / кому должен)
     - `(Clause)-[:HAS_RISK]->(Risk)`
     - `(Document)-[:INVOLVES]->(Party)`
-  - `CONSTRAINT_STATEMENTS` / `INDEX_STATEMENTS` — ограничения уникальности (например, `Document.id`, `LegalNorm.code`) и полнотекстовые индексы (например, `Clause.title`/`content`, `Risk.description`).
+    - `(Clause)-[:CONTAINS]->(Invoice)`, `(Party)-[:ISSUES]->(Invoice)-[:BILLED_TO]->(Party)` — счета для вкладки **«Финансы»**
+    - `(Clause)-[:HAS_DEADLINE]->(Deadline)-[:BINDS]->(Party)` — договорные/нормативные сроки для вкладки **«Юрист»**
+    - `(Document)-[:HAS_CLAIM]->(Claim)`, `(Claim)-[:FILED_BY|FILED_AGAINST]->(Party)`, `(Claim)-[:REFERENCES]->(Obligation)` — претензии
+  - `CONSTRAINT_STATEMENTS` / `INDEX_STATEMENTS` — ограничения уникальности (например, `Document.id`, `LegalNorm.code`, `Invoice.id`, `Deadline.id`, `Claim.id`) и полнотекстовые индексы (например, `Clause.title`/`content`, `Risk.description`).
   - `all_setup_statements()` — объединяет операторы Lex с `FEEDBACK_CONSTRAINT` из Learning Brain и `JOB_CONSTRAINT` из конвейера загрузки (импортируются лениво, чтобы избежать циклических импортов).
 
 - `neo4j_client.py` — `Neo4jClient`, асинхронная обёртка над драйвером Neo4j (`neo4j.AsyncGraphDatabase`):
@@ -26,6 +29,7 @@ Graph Brain отвечает за граф знаний Neo4j домена Lex: 
   - `create_document_node`, `create_clause`, `create_entity`, `create_relationship` — отдельные хелперы для записи.
   - `write_graph(nodes, relationships)` — **пакетная транзакционная запись**: принимает списки словарей узлов/связей (как их формирует `graph_rag.build_graph`) и записывает их в одной транзакции через `MERGE` (идемпотентно при повторной загрузке).
   - `find_risks_for_document`, `find_document_by_hash`, `list_documents`, `get_entity_by_label`, `find_relationships` — хелперы чтения, используемые MCP-инструментами.
+  - `get_risk_report`, `get_obligations_by_party`, `get_deadlines`, `list_invoices` — отраслевые отчёты, обслуживающие вкладки фронтенда **«Юрист»**/**«Финансы»** (см. [mcp_fabric.md](mcp_fabric.md)).
   - `run_read_query(cypher, parameters)` — выполняет произвольный (только чтение, проверяется выше по стеку в `nl2cypher`) Cypher-запрос и возвращает строки в виде словарей.
   - `_run_write` — внутренний хелпер; использует корректный паттерн `async def _tx_func(tx): await tx.run(...)`, необходимый асинхронному драйверу Neo4j (наивный `session.execute_write(lambda tx: tx.run(...))` не дожидается выполнения корректно).
 

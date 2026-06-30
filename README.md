@@ -1,21 +1,26 @@
 # Janus Platform
 
-Universal professional ML platform: a shared core (document understanding, knowledge graph, MCP data fabric) with domain modules for specific professions. First domain: **Lex** (legal).
+Universal professional ML platform: a shared core (document understanding, knowledge graph, MCP data fabric) with domain modules for specific professions. First domain: **Lex** (legal: contracts, obligations, risks, deadlines, claims), with a **Finance** domain (VAT/УСН tax calculations, invoice reporting) layered on top.
 
 ## Architecture
 
 ```
 core/
-  document_brain/   # OCR + layout parsing + LLM structuring of documents
-  graph_brain/       # Neo4j-based knowledge graph
-  mcp_fabric/        # MCP servers for external data sources
+  document_brain/      # OCR + layout parsing + LLM structuring of documents
+  graph_brain/          # Neo4j-based knowledge graph (Lex ontology)
+  learning_brain/        # Human feedback, reward model, prompt optimization
+  ingestion_pipeline/     # Multi-format extraction, chunking, batch graph writes
+  mcp_fabric/              # MCP server (FastMCP/SSE) exposing all tools
+  llm/                      # Shared LLM client (Yandex Cloud, OpenAI-compatible)
 domains/
-  lex/               # Legal domain module
+  lex/    # Legal domain (ontology lives in core/graph_brain/schema.py)
+  finance/ # VAT / УСН tax calculator helpers
+frontend/  # PyQt6 desktop UI: Chat, Documents, Graph, Entities, Learning Brain, Finance, Legal
 ```
 
 ## Status
 
-Early development. Core + Lex domain in progress.
+Core, Lex domain, and a Finance domain extension are implemented; the desktop frontend covers all seven tabs above. See [docs/en/architecture.md](docs/en/architecture.md) for the full picture.
 
 ## Documentation
 
