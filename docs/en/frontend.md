@@ -3,12 +3,12 @@
 **Path**: `frontend/`
 
 A desktop GUI built with **PyQt6** that connects to the MCP Fabric server
-over SSE and exposes its tools through four tabs.
+over SSE and exposes its tools through seven tabs.
 
 ## Files
 
 - `app.py` — entry point: creates `QApplication`, shows `MainWindow`, runs the event loop.
-- `main_window.py` — `MainWindow` (`QMainWindow`): owns a single `AsyncRunner` instance and a `QTabWidget` with the four pages below.
+- `main_window.py` — `MainWindow` (`QMainWindow`): owns a single `AsyncRunner` instance and a `QTabWidget` with the seven pages below.
 - `async_runner.py` — `AsyncRunner`: bridges async MCP calls to Qt.
   - Runs a dedicated background `asyncio` event loop on a `QThread`.
   - `submit(coro_factory)` schedules a coroutine on that loop from a short-lived helper thread (`asyncio.run_coroutine_threadsafe(...).result()`), then emits the Qt signal `finished(call_id, result, error)` — Qt automatically delivers this signal on the **main thread**, so UI code never touches widgets from a background thread.
@@ -17,11 +17,16 @@ over SSE and exposes its tools through four tabs.
   - `call_tool(name, arguments)` opens an `sse_client(MCP_SERVER_URL)` connection, creates a `ClientSession`, calls `session.initialize()`, then `session.call_tool(name, arguments)`.
   - Parses the tool's text content blocks as JSON (handles both single- and multi-block responses).
   - Raises `RuntimeError` with a clear message (including the server URL) if the connection fails — distinguishing "server not running" from other errors.
-  - Provides typed wrappers: `ask_graph`, `get_entity_by_label`, `find_relationships`, `extract_from_text`, `ingest_folder`, `get_ingestion_status`, `list_documents`, `submit_feedback`, `get_learning_stats`.
+  - Provides typed wrappers for every MCP tool: `ask_graph`, `get_entity_by_label`, `find_relationships`, `get_risk_report`, `get_obligations_by_party`, `get_deadlines`, `calculate_vat`, `calculate_usn_tax`, `list_invoices`, `extract_from_text`, `ingest_folder`, `get_ingestion_status`, `list_documents`, `submit_feedback`, `get_learning_stats` (see [mcp_fabric.md](mcp_fabric.md) for what each does).
+- `graph_layout.py` — pure (Qt-free) helpers used by the **Граф** tab: `build_graph_elements(relationships)` turns `find_relationships` records into a node map + edge list (colour-coded per label via `NODE_COLORS`), `circular_layout(node_keys, radius)` places nodes evenly on a circle, `describe_node_connections(key, nodes, edges)` renders a text summary of a node's neighbours.
+- `export_utils.py` — `rows_to_csv(columns, rows)`: renders a table as CSV text, reused by every report tab's "Export to CSV" button.
 - `pages/chat_tab.py` — **Чат (Chat)**: a text input + history view. Sends questions via `ask_graph` and renders the JSON result.
 - `pages/documents_tab.py` — **Документы (Documents)**: lists ingested documents (`list_documents`), with a folder picker (`QFileDialog.getExistingDirectory`) that triggers `ingest_folder` and shows the resulting `IngestionJob` summary.
-- `pages/entities_tab.py` — **Сущности (Entities)**: a combo box for entity label (`Party`/`Obligation`/`Risk`/`LegalNorm`), a name filter, and a results table (`get_entity_by_label`). Double-clicking a row looks up its relationships via `find_relationships`.
+- `pages/entities_tab.py` — **Сущности (Entities)**: a combo box for entity label (`Party`/`Obligation`/`Risk`/`LegalNorm`/`Invoice`/`Deadline`/`Claim`), a name filter, and a results table (`get_entity_by_label`). Double-clicking a row looks up its relationships via `find_relationships`.
+- `pages/graph_tab.py` — **Граф (Graph)**: an interactive `QGraphicsView` visualization of a node's relationships (`find_relationships`), laid out via `graph_layout.circular_layout` and zoomable with the mouse wheel; clicking a node shows its connections in a side panel (`describe_node_connections`).
 - `pages/learning_tab.py` — **Learning Brain**: a feedback submission form (`submit_feedback`) and a live stats table (`get_learning_stats`).
+- `pages/finance_tab.py` — **Финансы (Finance)**: a VAT calculator and a simplified-tax (УСН "доходы") calculator backed by `domains.finance.tax_calculator` directly (no MCP round-trip), plus an invoice report table (`list_invoices`) with CSV export.
+- `pages/legal_tab.py` — **Юрист (Legal)**: a sub-tabbed view with three reports, each rendered via a shared `_ReportTable` widget with CSV export — **Риски** (`get_risk_report`, severity colour-coded), **Обязательства** (`get_obligations_by_party`, filterable by party name or `*` for all), **Сроки** (`get_deadlines`, with an "only overdue" checkbox).
 
 ## Why a background asyncio loop?
 

@@ -26,8 +26,14 @@ Lex. Сервер построен на **FastMCP** (`mcp.server.fastmcp.FastMCP
 
 | Инструмент | На основе | Описание |
 |---|---|---|
-| `get_entity_by_label(label, name)` | `Neo4jClient.get_entity_by_label` | Поиск узлов заданной метки (`Party`, `Obligation`, `Risk`, `LegalNorm` и т.д.) по совпадению имени/названия/id/кода. |
+| `get_entity_by_label(label, name)` | `Neo4jClient.get_entity_by_label` | Поиск узлов заданной метки (`Party`, `Obligation`, `Risk`, `LegalNorm`, `Invoice`, `Deadline`, `Claim` и т.д.) по совпадению имени/названия/id/кода. |
 | `find_relationships(source, target)` | `Neo4jClient.find_relationships` | Поиск связей между двумя именованными сущностями. |
+| `get_risk_report()` | `Neo4jClient.get_risk_report` | Все риски по всем документам, отсортированные по серьёзности (high → medium → low). Поля записи: `document_id`, `document_title`, `clause_title`, `risk`, `severity`. |
+| `get_obligations_by_party(party_name)` | `Neo4jClient.get_obligations_by_party` | Обязательства, где `party_name` выступает обязанной стороной или бенефициаром (нечувствительное к регистру частичное совпадение). Поля: `obligated_party`, `obligation`, `beneficiary_party`. |
+| `get_deadlines(overdue_only=False)` | `Neo4jClient.get_deadlines` | Все узлы `Deadline`, отсортированные по дате; `overdue_only=True` — только просроченные. Поля: `deadline_id`, `description`, `date`, `type`, `bound_party`, `clause_title`, `document_title`. |
+| `calculate_vat(amount, vat_rate, amount_includes_vat=False)` | `domains.finance.tax_calculator` (`vat_from_net`/`vat_from_gross`) | Расчёт НДС по сумме — на входе можно подавать сумму без НДС или с НДС. Возвращает `net_amount`, `vat_rate`, `vat_amount`, `gross_amount`. |
+| `calculate_usn_tax(income, rate=6.0)` | `domains.finance.tax_calculator.simplified_tax` | Расчёт налога УСН «доходы» по сумме дохода и ставке. |
+| `list_invoices()` | `Neo4jClient.list_invoices` | Все узлы `Invoice` с указанием сторон-эмитента и плательщика — для финансовой отчётности. |
 | `extract_from_text(text, document_id=None)` | Document Brain `structure_text` + Graph Brain `build_graph` + `write_graph` | Запускает полный конвейер извлечения на «сыром» тексте и записывает результат в граф. |
 | `ask_graph(question)` | `nl2cypher.question_to_cypher` + `run_read_query` | Вопросы на естественном языке к графу, переводимые в только-читающий Cypher. |
 | `submit_feedback(document_id, clause_id, entity_id, entity_type, original_value, is_correct, corrected_value=None)` | Learning Brain `store_feedback` | Запись фидбэка человека по извлечённой сущности. |
@@ -36,9 +42,13 @@ Lex. Сервер построен на **FastMCP** (`mcp.server.fastmcp.FastMCP
 | `get_ingestion_status(job_id)` | Конвейер загрузки `get_job` | Статус ранее запущенного задания загрузки. |
 | `list_documents()` | `Neo4jClient.list_documents` | Список всех документов, находящихся в графе. |
 
-Каждый инструмент открывает собственный `Neo4jClient` (через `_get_client()`,
-который читает переменные окружения `NEO4J_*`) и закрывает его после
-выполнения.
+`get_risk_report`, `get_obligations_by_party`, `get_deadlines` обслуживают
+вкладку фронтенда **«Юрист»**; `calculate_vat`, `calculate_usn_tax`,
+`list_invoices` — вкладку **«Финансы»** (см. [frontend.md](frontend.md)).
+`calculate_vat`/`calculate_usn_tax` — обычные синхронные функции (без
+обращения к Neo4j); все остальные инструменты открывают собственный
+`Neo4jClient` (через `_get_client()`, который читает переменные окружения
+`NEO4J_*`) и закрывают его после выполнения.
 
 ## Конфигурация
 

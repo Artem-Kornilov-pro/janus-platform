@@ -4,15 +4,18 @@ Janus Platform is a "Core + Domains" system: a shared, domain-agnostic core
 (document understanding, a knowledge graph, a learning loop, an MCP data
 fabric, and an ingestion pipeline) plus pluggable domain modules. The first
 domain is **Lex** (legal contracts, clauses, obligations, risks, legal norms,
-court decisions).
+court decisions, invoices, deadlines, claims), with a lightweight **Finance**
+domain (`domains/finance/`) layered on top for VAT/УСН tax calculations and
+invoice reporting.
 
 ## High-level diagram
 
 ```
                         ┌─────────────────────────┐
                         │   PyQt6 Desktop Frontend │
-                        │  (Chat / Documents /     │
-                        │   Entities / Learning)   │
+                        │ (Chat / Documents / Graph│
+                        │  Entities / Learning /   │
+                        │  Finance / Legal)        │
                         └────────────┬─────────────┘
                                       │ MCP over SSE
                                       ▼
@@ -57,6 +60,8 @@ court decisions).
 | Ingestion Pipeline | `core/ingestion_pipeline/` | Multi-format extraction, chunking, batch graph writing, job tracking, folder watching | [ingestion_pipeline.md](ingestion_pipeline.md) |
 | Frontend | `frontend/` | PyQt6 desktop UI talking to MCP Fabric over SSE | [frontend.md](frontend.md) |
 | LLM Client | `core/llm/` | Shared LLM abstraction (Yandex Cloud, OpenAI-compatible) | see [document_brain.md](document_brain.md#llm-client) |
+| Lex domain | `domains/lex/` (ontology lives in `core/graph_brain/schema.py`) | Legal entities (`Party`, `Obligation`, `Risk`, `LegalNorm`, `CourtDecision`, `Invoice`, `Deadline`, `Claim`) and the risk/obligations/deadlines MCP tools behind the **Юрист** tab | [graph_brain.md](graph_brain.md), [mcp_fabric.md](mcp_fabric.md) |
+| Finance domain | `domains/finance/` | Pure VAT/УСН tax-calculation helpers, used both by MCP tools (`calculate_vat`, `calculate_usn_tax`) and directly by the **Финансы** tab | [mcp_fabric.md](mcp_fabric.md) |
 
 ## Technology stack
 

@@ -112,8 +112,9 @@ cd frontend
 python app.py
 ```
 
-The PyQt6 window opens with four tabs: **Чат**, **Документы**, **Сущности**,
-**Learning Brain**.
+The PyQt6 window opens with seven tabs: **Чат**, **Документы**, **Граф**,
+**Сущности**, **Learning Brain**, **Финансы**, **Юрист** (see
+[frontend.md](frontend.md) for what each does).
 
 ## 7. (Optional) Ingest documents from the command line
 
@@ -134,9 +135,11 @@ python feedback_cli.py
 pytest -q
 ```
 
-All 25+ tests should pass without Docker/LLM access (they use fixtures and
-mocks); a few `demo/*.py` scripts under `demo/` are live smoke tests that
-require Neo4j + Yandex Cloud credentials.
+The suite (90+ tests, covering Document/Graph/Learning Brain, the ingestion
+pipeline, MCP tools incl. legal/finance, and the frontend's pure helpers)
+should pass without Docker/LLM access — it uses fixtures and mocks; a few
+`demo/*.py` scripts under `demo/` are live smoke tests that require Neo4j +
+Yandex Cloud credentials.
 
 ## Using the Makefile
 

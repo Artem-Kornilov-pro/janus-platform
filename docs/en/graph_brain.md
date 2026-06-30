@@ -9,8 +9,8 @@ into graph data, and the async client used to read/write the graph.
 ## Files
 
 - `schema.py` — the Lex ontology:
-  - **Node labels**: `Document`, `Clause`, `Party`, `Obligation`, `Risk`, `LegalNorm`, `CourtDecision`
-  - **Relationship types**: `CONTAINS`, `REGULATES`, `VIOLATES`, `REFERENCES`, `PRECEDENT_FOR`, `OBLIGATES`, `HAS_RISK`, `INVOLVES`
+  - **Node labels**: `Document`, `Clause`, `Party`, `Obligation`, `Risk`, `LegalNorm`, `CourtDecision`, `Invoice`, `Deadline`, `Claim`
+  - **Relationship types**: `CONTAINS`, `REGULATES`, `VIOLATES`, `REFERENCES`, `PRECEDENT_FOR`, `OBLIGATES`, `HAS_RISK`, `INVOLVES`, `ISSUES`, `BILLED_TO`, `HAS_DEADLINE`, `BINDS`, `HAS_CLAIM`, `FILED_BY`, `FILED_AGAINST`
   - Typical relationships:
     - `(Document)-[:CONTAINS]->(Clause)`
     - `(Clause)-[:REGULATES|VIOLATES|REFERENCES]->(LegalNorm | CourtDecision)`
@@ -18,7 +18,10 @@ into graph data, and the async client used to read/write the graph.
     - `(Party)-[:OBLIGATES]->(Obligation)-[:OBLIGATES]->(Party)` (owed-by / owed-to)
     - `(Clause)-[:HAS_RISK]->(Risk)`
     - `(Document)-[:INVOLVES]->(Party)`
-  - `CONSTRAINT_STATEMENTS` / `INDEX_STATEMENTS` — uniqueness constraints (e.g. `Document.id`, `LegalNorm.code`) and full-text indexes (e.g. `Clause.title`/`content`, `Risk.description`).
+    - `(Clause)-[:CONTAINS]->(Invoice)`, `(Party)-[:ISSUES]->(Invoice)-[:BILLED_TO]->(Party)` — invoices for the **Финансы (Finance)** tab
+    - `(Clause)-[:HAS_DEADLINE]->(Deadline)-[:BINDS]->(Party)` — contractual/statutory deadlines for the **Юрист (Legal)** tab
+    - `(Document)-[:HAS_CLAIM]->(Claim)`, `(Claim)-[:FILED_BY|FILED_AGAINST]->(Party)`, `(Claim)-[:REFERENCES]->(Obligation)` — legal claims/pretensions (претензии)
+  - `CONSTRAINT_STATEMENTS` / `INDEX_STATEMENTS` — uniqueness constraints (e.g. `Document.id`, `LegalNorm.code`, `Invoice.id`, `Deadline.id`, `Claim.id`) and full-text indexes (e.g. `Clause.title`/`content`, `Risk.description`).
   - `all_setup_statements()` — combines the Lex statements with the Learning Brain's `FEEDBACK_CONSTRAINT` and the Ingestion Pipeline's `JOB_CONSTRAINT` (imported lazily to avoid circular imports).
 
 - `neo4j_client.py` — `Neo4jClient`, an async wrapper around the Neo4j driver (`neo4j.AsyncGraphDatabase`):
@@ -26,6 +29,7 @@ into graph data, and the async client used to read/write the graph.
   - `create_document_node`, `create_clause`, `create_entity`, `create_relationship` — individual write helpers.
   - `write_graph(nodes, relationships)` — **batch transactional write**: takes lists of node/relationship dicts (as produced by `graph_rag.build_graph`) and writes them all in one transaction using `MERGE` (idempotent on re-ingestion).
   - `find_risks_for_document`, `find_document_by_hash`, `list_documents`, `get_entity_by_label`, `find_relationships` — read helpers used by MCP tools.
+  - `get_risk_report`, `get_obligations_by_party`, `get_deadlines`, `list_invoices` — domain-specific reports backing the **Юрист**/**Финансы** frontend tabs (see [mcp_fabric.md](mcp_fabric.md)).
   - `run_read_query(cypher, parameters)` — runs an arbitrary (read-only, enforced upstream by `nl2cypher`) Cypher query and returns rows as dicts.
   - `_run_write` — internal helper; uses a proper `async def _tx_func(tx): await tx.run(...)` pattern required by the async Neo4j driver (a naive `session.execute_write(lambda tx: tx.run(...))` does not await correctly).
 
